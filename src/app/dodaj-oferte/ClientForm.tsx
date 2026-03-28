@@ -3,9 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Building2, Rows, Castle, Briefcase, Map as MapIcon, MapPin, Sparkles, Loader2, CheckCircle, Crown, Upload, Trash2, LayoutTemplate, X, Lock, User, Phone, Mail, ShieldCheck, Flame, AlertCircle } from "lucide-react";
+import { Home, 
+  Building2, Rows, Castle, Briefcase, Map as MapIcon, MapPin, 
+  Sparkles, Loader2, CheckCircle, Crown, Key, Upload, Trash2, 
+  LayoutTemplate, X, Lock, User, Phone, Mail, Flame, AlertCircle, Check,
+  Navigation, EyeOff, Bold, Italic, Underline, Heading, AlignLeft
+} from "lucide-react";
 
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -13,8 +18,10 @@ if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 }
 
-const inputPremium = "w-full bg-[#0a0a0a] border border-[#222] rounded-2xl text-white text-lg py-4 px-5 focus:bg-[#111] focus:border-emerald-500 focus:shadow-[inset_0_4px_15px_rgba(0,0,0,1),0_0_20px_rgba(16,185,129,0.15)] outline-none transition-all duration-300 placeholder:text-gray-700 shadow-[inset_0_4px_15px_rgba(0,0,0,1),0_1px_1px_rgba(255,255,255,0.05)]";
-const labelPremium = "block text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1";
+// Luksusowe style bazowe (Glassmorphism & Apple Dark Mode)
+const inputPremium = "w-full bg-white/5 border border-white/10 rounded-2xl text-[#f5f5f7] text-base md:text-lg py-4 px-5 focus:bg-white/10 focus:border-[#10b981] outline-none transition-all duration-300 placeholder:text-zinc-500 backdrop-blur-md shadow-inner";
+const labelPremium = "flex items-center gap-2 text-[11px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-2 ml-1";
+const glassPanel = "bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden transition-all duration-500";
 
 const PROPERTY_TYPES = [
   { id: "Mieszkanie", icon: Building2 },
@@ -23,70 +30,135 @@ const PROPERTY_TYPES = [
   { id: "Lokal Użytkowy", icon: Briefcase },
   { id: "Działka", icon: MapIcon }
 ];
-const AMENITIES = ["Balkon", "Garaż/Miejsce park.", "Piwnica/Pom. gosp.", "Ogródek", "Dwupoziomowe", "Winda"];
-
-const StepNode = ({ active }: { active: boolean }) => (
-  <div className={`absolute top-1/2 -left-[48px] -translate-y-1/2 w-5 h-5 rounded-full border-[3px] transition-all duration-700 z-20 flex items-center justify-center ${active ? 'bg-[#0a0a0a] border-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-[#111] border-[#222]'}`}>
-    {active && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2 h-2 bg-emerald-400 rounded-full" />}
-  </div>
-);
-
-const LivingIcon = ({ type, isActive, icon: BaseIcon }: { type: string, isActive: boolean, icon: any }) => {
-  const color = isActive ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]' : 'text-zinc-500 group-hover:text-emerald-400/80 transition-colors duration-300';
-  return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <motion.div whileHover={{ scale: 1.15, rotate: type === 'Lokal Użytkowy' ? 5 : type === 'Działka' ? -5 : 0 }} animate={isActive ? { y: [-2, 2, -2] } : {}} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="relative z-10 flex items-center justify-center">
-        <BaseIcon size={36} strokeWidth={1.5} className={color} />
-      </motion.div>
-      <div className={`absolute inset-0 bg-emerald-500/20 blur-xl rounded-full transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}></div>
-      {isActive && type === 'Dom Wolnostojący' && <motion.div animate={{ y: [-10, -30], opacity: [0, 0.5, 0], scale: [0.5, 1.2] }} transition={{ duration: 2, repeat: Infinity }} className="absolute top-0 left-1/2 w-2 h-2 bg-white/30 blur-sm rounded-full" />}
-    </div>
-  );
-};
-
-const CategoryCRMIcon = ({ cat, isActive, onClick }: any) => (
-  <motion.div whileHover={{ y: -5 }} whileTap={{ scale: 0.95 }} onClick={onClick} className={`h-28 rounded-2xl border flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-300 group relative overflow-hidden ${isActive ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'bg-[#111] border-white/5 hover:border-emerald-500/40 hover:bg-[#161616]'}`}>
-    <div className="w-12 h-12 relative z-10">
-      <LivingIcon type={cat.id} isActive={isActive} icon={cat.icon} />
-    </div>
-    <span className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 text-center relative z-10 ${isActive ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-300'}`}>{cat.id}</span>
-  </motion.div>
-);
+const AMENITIES = ["Balkon", "Garaż/Miejsce park.", "Piwnica/Pom. gosp.", "Ogródek", "Dwupoziomowe", "Winda", "Klimatyzacja"];
+const HEATING_TYPES = ["Miejskie", "Gazowe", "Elektryczne", "Pompa Ciepła", "Węglowe/Pellet", "Inne"];
 
 const SortableItem = ({ id, img, idx, onRemove }: any) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition, 
+    zIndex: isDragging ? 999 : 1,
+    opacity: isDragging ? 0.9 : 1,
+    scale: isDragging ? '1.05' : '1',
+    boxShadow: isDragging ? '0 20px 40px rgba(16,185,129,0.5)' : ''
+  };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-28 h-28 relative rounded-2xl overflow-hidden group border border-zinc-700 hover:border-emerald-500/50 transition-all z-50">
-      <img src={img} className="w-full h-full object-cover pointer-events-none" />
-      <button onPointerDown={(e) => { e.stopPropagation(); onRemove(idx); }} className="absolute top-2 right-2 p-2 bg-red-600/90 hover:bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all z-[60] shadow-lg">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-32 h-32 relative rounded-2xl overflow-hidden group border border-white/10 hover:border-[#10b981]/50 transition-all z-50 shadow-lg cursor-grab active:cursor-grabbing">
+      <img src={img} className="w-full h-full object-cover pointer-events-none" alt="Miniatura" />
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      <button onPointerDown={(e) => { e.stopPropagation(); onRemove(idx); }} className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all z-[60] shadow-lg backdrop-blur-sm">
         <Trash2 size={14}/> 
       </button>
-      {idx === 0 && <span className="absolute bottom-0 left-0 w-full bg-emerald-500 text-black text-[9px] font-black uppercase text-center py-1 z-10">Główne</span>}
+      {idx === 0 && <span className="absolute bottom-0 left-0 w-full bg-[#10b981] backdrop-blur-md text-black text-[9px] font-black uppercase tracking-widest text-center py-1 z-10 shadow-[0_-5px_15px_rgba(16,185,129,0.3)]">Główne</span>}
     </div>
   );
 };
 
 export default function ClientForm({ initialUser }: { initialUser?: any }) {
-  const [data, setData] = useState<any>({ propertyType: '', locationType: 'exact', amenities: [], district: '', apartmentNumber: '', contactName: initialUser?.name || '', contactPhone: initialUser?.phone || '', email: initialUser?.email || '', password: '', description: '', plotArea: '' });
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const [data, setData] = useState<any>({ 
+    propertyType: '', title: '', 
+    locationType: 'exact', address: '', lng: null, lat: null, district: '', apartmentNumber: '', 
+    price: '', area: '', rooms: '', floor: '', buildYear: '', plotArea: '', heating: '', 
+    amenities: [], description: '', 
+    advertiserType: 'private', agencyName: '',
+    contactName: initialUser?.name || '', contactPhone: initialUser?.phone || '', email: initialUser?.email || '', password: '' 
+  });
+  
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
-
+  const [addressError, setAddressError] = useState('');
+  
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [filesMap, setFilesMap] = useState<{[key: string]: File}>({}); 
+  const [totalSizeMB, setTotalSizeMB] = useState(0);
   const [floorPlan, setFloorPlan] = useState<string | null>(null);
   const [floorPlanFile, setFloorPlanFile] = useState<File | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [actionModal, setActionModal] = useState<"none" | "limit" | "success" | "error">("none");
-  const [uploadProgress, setUploadProgress] = useState(''); 
+  const [actionModal, setActionModal] = useState<"none" | "limit" | "success" | "error" | "otp" | "payment_success" | "oferta_plus">("none");
+  const [serverErrorMessage, setServerErrorMessage] = useState('');
+  
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [emailStatus, setEmailStatus] = useState('idle');
+  const [phoneStatus, setPhoneStatus] = useState('idle');
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const updateData = (newData: any) => setData({ ...data, ...newData });
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (urlParams.get('oferta_plus') === 'true') {
+        setActionModal('oferta_plus');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      if (urlParams.get('payment_success') === 'true') {
+        setActionModal('payment_success');
+        // Czyszczenie paska adresu, żeby po odświeżeniu nie pokazało znowu sukcesu
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
+
+
+  // --- Twardy Formater Telefonu ---
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^\d+]/g, ''); 
+    if (!val.startsWith('+48')) {
+        val = val.replace(/\+/g, '');
+        if (val.startsWith('48')) val = val.slice(2);
+        val = '+48 ' + val;
+    }
+    let digits = val.slice(3).replace(/\D/g, '').slice(0, 9);
+    let formatted = '+48';
+    if (digits.length > 0) formatted += ' ' + digits.slice(0, 3);
+    if (digits.length > 3) formatted += ' ' + digits.slice(3, 6);
+    if (digits.length > 6) formatted += ' ' + digits.slice(6, 9);
+    if (digits === '') formatted = '';
+    updateData({ contactPhone: formatted });
+  };
+
+  // --- Walidacja Live (E-mail i Telefon) ---
+  useEffect(() => {
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+    if (!data.email) { setEmailStatus('idle'); return; }
+    if (!isEmailValid) { setEmailStatus('invalid'); return; }
+    const timer = setTimeout(async () => {
+      setEmailStatus('checking');
+      try {
+        const res = await fetch('/api/auth/check-exists', { method: 'POST', body: JSON.stringify({ email: data.email }) });
+        if (!res.ok) throw new Error();
+        const json = await res.json();
+        setEmailStatus(json.exists ? 'taken' : 'available');
+      } catch(e) { setEmailStatus('idle'); }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [data.email]);
+
+  useEffect(() => {
+    const isPhoneValid = (data.contactPhone || '').replace(/\D/g, '').length === 11;
+    if (!data.contactPhone) { setPhoneStatus('idle'); return; }
+    if (!isPhoneValid) { setPhoneStatus('invalid'); return; }
+    const timer = setTimeout(async () => {
+      setPhoneStatus('checking');
+      try {
+        const res = await fetch('/api/auth/check-exists', { method: 'POST', body: JSON.stringify({ phone: data.contactPhone }) });
+        if (!res.ok) throw new Error();
+        const json = await res.json();
+        setPhoneStatus(json.exists ? 'taken' : 'available');
+      } catch(e) { setPhoneStatus('idle'); }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [data.contactPhone]);
+
+  // --- Mapbox Logic (Luksusowa Szpilka vs Dysk) ---
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (!mapInstance.current) {
@@ -99,15 +171,17 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
   useEffect(() => {
     if (mapInstance.current && data.lat && data.lng) {
       const map = mapInstance.current;
-      map.flyTo({ center: [data.lng, data.lat], zoom: data.locationType === 'approximate' ? 14.5 : 18.2, pitch: data.locationType === 'approximate' ? 45 : 72, speed: 1.2, curve: 1 });
-      if (markerRef.current) markerRef.current.remove();
+      const isExact = data.locationType === 'exact';
+      map.flyTo({ center: [data.lng, data.lat], zoom: isExact ? 17.5 : 14, pitch: isExact ? 60 : 30, speed: 1.2, curve: 1 });
       
+      if (markerRef.current) markerRef.current.remove();
       const el = document.createElement('div');
-      if (data.locationType === 'exact') {
-        el.innerHTML = `<div class="relative flex flex-col items-center justify-center -mt-10"><div class="relative flex items-center justify-center w-10 h-10"><div class="absolute w-full h-full bg-red-600 rounded-full animate-ping opacity-60"></div><div class="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-red-400 via-red-600 to-red-900 rounded-full shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),0_10px_20px_rgba(220,38,38,0.8)] border border-red-300 z-10"><div class="w-2.5 h-2.5 bg-white rounded-full shadow-[0_0_10px_white]"></div></div></div><div class="w-1 h-6 bg-gradient-to-b from-red-800 to-transparent -mt-1 rounded-full z-0"></div></div>`;
+      
+      if (isExact) {
+        el.innerHTML = `<div class="relative flex flex-col items-center justify-center -mt-10"><div class="relative flex items-center justify-center w-10 h-10"><div class="absolute w-full h-full bg-[#10b981] rounded-full animate-ping opacity-40"></div><div class="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-[#10b981] to-emerald-700 rounded-full shadow-[0_10px_20px_rgba(16,185,129,0.8)] border border-emerald-300 z-10"><div class="w-2.5 h-2.5 bg-black rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]"></div></div></div><div class="w-1 h-6 bg-gradient-to-b from-emerald-600 to-transparent -mt-1 rounded-full z-0"></div></div>`;
         markerRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([data.lng, data.lat]).addTo(map);
       } else {
-        el.innerHTML = `<div class="relative flex items-center justify-center w-40 h-40"><div class="absolute w-full h-full bg-emerald-500 rounded-full animate-ping opacity-20" style="animation-duration: 3s;"></div><div class="absolute w-24 h-24 bg-emerald-500 rounded-full animate-ping opacity-30" style="animation-duration: 3s; animation-delay: 1s;"></div><div class="absolute w-12 h-12 bg-emerald-500/20 rounded-full backdrop-blur-md border border-emerald-500/50 shadow-[inset_0_0_20px_rgba(16,185,129,0.5)]"></div><div class="relative w-3 h-3 bg-emerald-400 rounded-full shadow-[0_0_15px_#10b981,0_0_30px_#10b981]"></div></div>`;
+        el.innerHTML = `<div class="relative flex items-center justify-center w-48 h-48"><div class="absolute w-full h-full bg-[#10b981] rounded-full animate-ping opacity-15" style="animation-duration: 4s;"></div><div class="absolute w-32 h-32 bg-[#10b981] rounded-full animate-ping opacity-20" style="animation-duration: 4s; animation-delay: 1.5s;"></div><div class="absolute w-16 h-16 bg-[#10b981]/20 rounded-full backdrop-blur-sm border border-[#10b981]/30 shadow-[inset_0_0_20px_rgba(16,185,129,0.3)]"></div></div>`;
         markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([data.lng, data.lat]).addTo(map);
       }
     }
@@ -117,456 +191,802 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
     updateData({ address: query });
     if (query.length > 2) {
       try {
-        const bbox = "20.85,52.1,21.27,52.36";
         const token = mapboxgl.accessToken || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pl&bbox=${bbox}&language=pl`);
+        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=pl&bbox=20.85,52.1,21.27,52.36&language=pl`);
         const json = await res.json();
         setAddressSuggestions(json.features || []);
       } catch (e) {}
-    } else {
-      setAddressSuggestions([]);
-    }
+    } else { setAddressSuggestions([]); }
   };
 
   const selectAddress = (feature: any) => {
+    if (!feature.place_type || !feature.place_type.includes('address')) {
+      setAddressError('Wymagany dokładny numer budynku (np. "Złota 44").');
+      updateData({ address: feature.place_name_pl || feature.text });
+      return; 
+    }
+    setAddressError('');
+    
+    // Inteligentne wyciąganie dzielnicy z Mapbox context
     let foundDistrict = '';
     const districts = ["Mokotów", "Praga-Południe", "Wola", "Ursynów", "Bielany", "Śródmieście", "Targówek", "Bemowo", "Ochota", "Wawer", "Praga-Północ", "Białołęka", "Ursus", "Żoliborz", "Włochy", "Wilanów", "Wesoła", "Rembertów"];
     const searchContext = [feature.place_name_pl || feature.text, ...(feature.context?.map((c: any) => c.text_pl || c.text) || [])].join(' ').toLowerCase();
     for (const d of districts) {
       if (searchContext.includes(d.toLowerCase())) { foundDistrict = d; break; }
     }
-    updateData({ address: feature.place_name_pl || feature.text, lng: feature.center[0], lat: feature.center[1], locationType: 'exact', ...(foundDistrict ? { district: foundDistrict } : {}) });
+    
+    updateData({ 
+      address: feature.place_name_pl || feature.text, 
+      lng: feature.center[0], lat: feature.center[1], 
+      ...(foundDistrict ? { district: foundDistrict } : {}) 
+    });
     setAddressSuggestions([]);
   };
 
+  // --- Zarządzanie Zdjeciami (Limit 30MB) ---
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      let newSize = totalSizeMB;
+      const validFiles = files.filter(f => {
+        const sizeMB = f.size / (1024 * 1024);
+        if (newSize + sizeMB > 30) return false;
+        newSize += sizeMB;
+        return true;
+      });
+
+      if (validFiles.length < files.length) {
+        alert("Przekroczono limit 30 MB. Część zdjęć nie została dodana.");
+      }
+
+      setTotalSizeMB(newSize);
       const newMap = { ...filesMap };
-      const newImages = files.map(f => {
+      const newImages = validFiles.map(f => {
         const url = URL.createObjectURL(f);
         newMap[url] = f;
         return url;
       });
       setFilesMap(newMap);
-      setImagesList(prev => [...prev, ...newImages].slice(0, 15));
+      setImagesList(prev => [...prev, ...newImages]);
     }
   };
 
   const handleFloorPlanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setFloorPlanFile(file);
-      setFloorPlan(URL.createObjectURL(file));
+      setFloorPlanFile(e.target.files[0]);
+      setFloorPlan(URL.createObjectURL(e.target.files[0]));
     }
   };
 
-  const handleRemoveImage = (indexToRemove: number) => setImagesList(prev => prev.filter((_, i) => i !== indexToRemove));
+  const handleRemoveImage = (indexToRemove: number) => {
+    const url = imagesList[indexToRemove];
+    if (filesMap[url]) {
+      setTotalSizeMB(prev => Math.max(0, prev - (filesMap[url].size / (1024 * 1024))));
+    }
+    setImagesList(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
 
+  // --- Luksusowy Asystent AI (Nowy Model) ---
   const handleGenerateAI = () => {
     setIsGeneratingAI(true);
     setTimeout(() => {
       const pType = data.propertyType || "Nieruchomość";
-      const pDist = data.district || data.address || "prestiżowej lokalizacji";
+      const pDist = data.district || "prestiżowej lokalizacji";
       const pArea = data.area ? `${data.area} m²` : "przestronna";
-      const aiText = `Ekskluzywna oferta w EstateOS. Ten wyjątkowy obiekt (${pType}) o powierzchni ${pArea}, położony w ${pDist}, charakteryzuje się najwyższym standardem wykończenia. Został zaprojektowany z dbałością o każdy detal, aby sprostać oczekiwaniom nawet najbardziej wymagających klientów. Idealna propozycja dla osób ceniących luksus, prywatność i komfort życia na najwyższym poziomie. Zapraszamy do kontaktu w celu umówienia dyskretnej prezentacji.`;
-      updateData({ description: aiText });
+      const pRooms = data.rooms ? `${data.rooms}-pokojowa ` : "";
+      
+      const aiHTML = `
+        <p><strong>Wyjątkowa oferta w sercu ${pDist}.</strong> Przedstawiamy Państwu niezwykłą przestrzeń, która łączy w sobie elegancję, funkcjonalność i najwyższy standard wykończenia.</p>
+        <br/>
+        <p>Ta ${pRooms}${pType.toLowerCase()} o powierzchni ${pArea} została zaprojektowana z myślą o najbardziej wymagających klientach. Panoramiczne okna, starannie dobrane materiały i doskonały układ pomieszczeń tworzą niepowtarzalny klimat luksusu na co dzień.</p>
+        <br/>
+        <p><em>Zalety lokalizacji:</em> Nieruchomość znajduje się w zacisznej, a jednocześnie doskonale skomunikowanej części miasta, oferując szybki dostęp do pełnej infrastruktury miejskiej przy zachowaniu intymności.</p>
+        <br/>
+        <p><u>Zapraszamy do kontaktu</u> w celu umówienia dyskretnej prezentacji tego wyjątkowego miejsca.</p>
+      `;
+      if (editorRef.current) editorRef.current.innerHTML = aiHTML;
+      updateData({ description: aiHTML });
       setIsGeneratingAI(false);
-    }, 1800);
+    }, 2000);
   };
 
-  const handleSubmit = async () => {
-    if (initialUser?.limitReached) {
-      setActionModal("limit");
-      return;
-    }
+  const execCommand = (cmd: string) => {
+    document.execCommand(cmd, false, undefined);
+    if (editorRef.current) editorRef.current.focus();
+  };
 
+  // --- Submit Logic ---
+  const handleSubmit = async () => {
+    if (initialUser?.limitReached) { setActionModal("limit"); return; }
     setIsSubmitting(true);
     try {
-      setUploadProgress('Wgrywanie zdjęć na serwer...');
+      setUploadProgress('Przygotowywanie mediów (0%)...');
       const finalImages: string[] = [];
-      for (const imgUrl of imagesList) {
-        if (imgUrl.startsWith('blob:')) {
-          const file = filesMap[imgUrl];
-          if (file) {
-            const formData = new FormData();
-            formData.append('file', file);
+      for (let i = 0; i < imagesList.length; i++) {
+        const imgUrl = imagesList[i];
+        setUploadProgress(`Wysyłanie zdjęcia ${i + 1} z ${imagesList.length}...`);
+        if (imgUrl.startsWith('blob:') && filesMap[imgUrl]) {
+            const formData = new FormData(); formData.append('file', filesMap[imgUrl]);
             try {
-              const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-              if (uploadRes.ok) {
-                const uploadData = await uploadRes.json();
-                finalImages.push(uploadData.url || uploadData.fileUrl || imgUrl);
-              } else finalImages.push(imgUrl);
+              const res = await fetch('/api/upload', { method: 'POST', body: formData });
+              if (res.ok) { const d = await res.json(); finalImages.push(d.url || d.fileUrl || imgUrl); } else finalImages.push(imgUrl);
             } catch (err) { finalImages.push(imgUrl); }
-          }
         } else finalImages.push(imgUrl);
       }
 
       let finalFloorPlan = floorPlan;
       if (floorPlan?.startsWith('blob:') && floorPlanFile) {
-        const formData = new FormData();
-        formData.append('file', floorPlanFile);
+        setUploadProgress('Wysyłanie rzutu...');
+        const formData = new FormData(); formData.append('file', floorPlanFile);
         try {
-          const upRes = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (upRes.ok) {
-            const upData = await upRes.json();
-            finalFloorPlan = upData.url || upData.fileUrl;
-          }
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) { const d = await res.json(); finalFloorPlan = d.url || d.fileUrl; }
         } catch (e) {}
       }
 
-      setUploadProgress('Zapis do bazy...');
-      const dist = data.district || (data.address || "").split(",")[1]?.trim() || "Warszawa"; 
+      setUploadProgress('Zapisywanie na serwerze EstateOS...');
       const cleanPrice = String(data.price || '').replace(/\D/g, "");
+      const finalDesc = editorRef.current?.innerHTML || data.description;
       
       const payload = { 
         ...data, 
-        title: data.propertyType + " - " + dist, 
-        district: dist, 
+        description: finalDesc,
+        title: data.title || `${data.propertyType} - ${data.district || 'Polska'}`, 
         price: cleanPrice, 
         area: String(data.area).replace(',', '.'),
-        rooms: data.rooms ? String(data.rooms) : null,
-        year: data.buildYear ? String(data.buildYear) : null,
-        plotArea: data.plotArea ? String(data.plotArea) : null,
         images: finalImages.length > 0 ? JSON.stringify(finalImages) : null, 
         imageUrl: finalImages[0] || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop", 
-        floorPlan: finalFloorPlan, 
+        floorPlan: finalFloorPlan,
         amenities: data.amenities.join(", ") 
       };
 
-      const response = await fetch('/api/offers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (response.ok || response.status === 201 || response.status === 200) {
-        setActionModal("success");
-      } else {
+      
+      // TWARDA BLOKADA BLOBÓW - Zabezpieczenie przed utratą zdjęć
+      if (finalImages.some(img => img.startsWith('blob:'))) {
+        setServerErrorMessage('Błąd krytyczny: Zdjęcia nie zostały poprawnie przesłane na serwer. Spróbuj dodać je ponownie lub odśwież stronę.');
         setActionModal("error");
+        setIsSubmitting(false);
+        return;
       }
-    } catch (error) { setActionModal("error"); } finally { setIsSubmitting(false); setUploadProgress(''); }
+      const response = await fetch('/api/offers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const responseData = await response.json().catch(() => ({}));
+      if (response.ok || response.status === 201 || response.status === 200) {
+        if (responseData.requiresVerification) {
+           setActionModal("otp");
+        } else {
+           setActionModal("success");
+        }
+      } else {
+        setServerErrorMessage(responseData.error || responseData.message || 'Odrzucono przez serwer');
+        setActionModal(response.status === 403 && responseData.limitReached ? "limit" : "error");
+      }
+    } catch (error) { 
+        setServerErrorMessage('Błąd połączenia z serwerem API.'); setActionModal("error"); 
+    } finally { setIsSubmitting(false); setUploadProgress(''); }
   };
 
+  // --- Żelazna Walidacja Kroków ---
   const isTypeSelected = !!data.propertyType;
-  const requiresApartmentNumber = data.propertyType !== 'Działka' && data.propertyType !== 'Dom Wolnostojący';
-  const isLocationSelected = !!data.lat && !!data.lng && !!data.district && (!requiresApartmentNumber || !!data.apartmentNumber);
   
-  const hasValidPrice = !!String(data.price || '').replace(/\D/g, "");
-  const hasValidArea = !!String(data.area || '').replace(/[^0-9.]/g, "");
-  const isFinanceDone = isLocationSelected && hasValidPrice && hasValidArea;
+  const hasBuildingNumber = /\d/.test((data.address || '').split(',')[0]);
+  const isLocationDone = !!data.lat && !!data.lng && !!data.district && !addressError && hasBuildingNumber && 
+                         (data.propertyType !== 'Mieszkanie' || (data.propertyType === 'Mieszkanie' && !!data.apartmentNumber));
   
-  const isTechDone = isFinanceDone && (data.propertyType === 'Działka' || ((data.rooms?.length || 0) > 0 && (data.buildYear?.length || 0) === 4));
-  const isAmenitiesDone = data.amenities && data.amenities.length > 0;
-  const isMediaDone = imagesList.length > 0;
-  const isContactDone = initialUser?.isLoggedIn || (!!data.email && !!data.contactPhone && !!data.contactName);
+  const cleanPrice = String(data.price || '').replace(/\D/g, "");
+  const cleanArea = String(data.area || '').replace(/[^0-9.]/g, "");
+  const isFinanceDone = isLocationDone && cleanPrice.length > 0 && cleanArea.length > 0;
+  
+  const requiresPlot = ['Dom Wolnostojący', 'Segment', 'Działka'].includes(data.propertyType);
+  const isTechDone = isFinanceDone && (!requiresPlot || (requiresPlot && !!data.plotArea));
+  
+  const isMediaDone = isTechDone && imagesList.length > 0;
+  
+  const isContactDone = initialUser?.isLoggedIn ? true : (
+    !!data.email && emailStatus === 'available' &&
+    !!data.contactPhone && phoneStatus === 'available' &&
+    !!data.contactName && !!data.password && data.password.length >= 6 &&
+    (data.advertiserType === 'private' || (data.advertiserType === 'agency' && !!data.agencyName))
+  );
 
-  const stepsArray = [isTypeSelected, isLocationSelected, isFinanceDone, isTechDone, isAmenitiesDone, isMediaDone];
-  if (!initialUser?.isLoggedIn) stepsArray.push(isContactDone);
-  
-  const currentProgress = stepsArray.filter(Boolean).length;
-  const progressPercent = Math.max(0, (currentProgress / stepsArray.length) * 100);
-  
-  const canPublish = initialUser?.isLoggedIn ? isMediaDone : isContactDone;
+  const canPublish = isTypeSelected && isLocationDone && isFinanceDone && isTechDone && isMediaDone && isContactDone;
 
   return (
-    <main className="min-h-screen bg-[#000] text-white pt-24 pb-40 px-4 md:px-8 font-sans selection:bg-emerald-500/30 overflow-x-hidden relative">
+    <main className="min-h-screen bg-[#050505] text-[#f5f5f7] pt-24 pb-40 px-4 md:px-8 font-sans overflow-x-hidden relative selection:bg-[#10b981]/30">
       
-      <div className="absolute left-[24px] md:left-[56px] top-64 bottom-0 w-1 hidden md:block bg-[#1a1a1a] rounded-full border border-white/5 shadow-inner z-0 overflow-hidden">
-        <motion.div className="w-full bg-emerald-500 shadow-[0_0_15px_#10b981]" initial={{ height: "0%" }} animate={{ height: `${progressPercent}%` }} transition={{ duration: 0.8, ease: "easeInOut" }} />
-      </div>
+      {/* Dynamiczne Tło */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-[#10b981]/5 to-transparent blur-[150px] pointer-events-none rounded-full" />
 
-      <div className="max-w-4xl mx-auto relative z-10 pb-20">
-        
-        <div className="text-center mb-16 md:pl-20 relative z-10">
-          <h1 className="text-5xl md:text-6xl font-black mb-4 tracking-tighter">Dodaj <span className="text-emerald-500 drop-shadow-[0_0_15px_#10b981]">Ofertę.</span></h1>
-          <p className="text-gray-300 text-lg">System publikacji klasy Premium.</p>
+      <div className="max-w-4xl mx-auto relative z-10">
+        <div className="text-center mb-16">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-[#f5f5f7] text-xs font-bold tracking-widest mb-6 backdrop-blur-md">
+            <Sparkles size={14} className="text-[#10b981]" /> Formularz EstateOS Premium
+          </motion.div>
+          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter text-white">
+            Dodaj <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10b981] to-emerald-400 drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]">Ofertę.</span>
+          </h1>
         </div>
 
-        <div className="relative md:pl-20 z-10 space-y-16">
+        <div className="space-y-8">
             
-            <div className={`relative transition-all duration-700 ${isTypeSelected ? 'opacity-100' : 'opacity-100'}`}>
-              <div className="absolute top-1/2 -left-[48px] -translate-y-1/2 w-8 h-8 rounded-full bg-[#0a0a0a] border-4 border-[#1a1a1a] flex items-center justify-center z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                  <div className={`w-3 h-3 rounded-full transition-all duration-700 ${currentProgress > 0 ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-zinc-800'}`} />
+            {/* KROK 1: TOŻSAMOŚĆ I RODZAJ */}
+            <section className={glassPanel}>
+              <div className="flex items-center gap-5 mb-10">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all duration-500 ${isTypeSelected ? 'bg-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110' : 'bg-white/5 text-zinc-500 border border-white/10'}`}>1</div>
+                <h2 className="text-2xl font-black uppercase tracking-widest text-white">Rodzaj Nieruchomości</h2>
               </div>
-              <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 1: Kategoria</h2>
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  {PROPERTY_TYPES.map(cat => (
-                    <CategoryCRMIcon key={cat.id} cat={cat} isActive={data.propertyType === cat.id} onClick={() => updateData({ propertyType: cat.id })} />
-                  ))}
-                </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                {PROPERTY_TYPES.map(cat => {
+                  const isActive = data.propertyType === cat.id;
+                  return (
+                    <button key={cat.id} onClick={() => updateData({ propertyType: cat.id })} 
+                      className={`h-36 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all duration-400 relative overflow-hidden group ${isActive ? 'bg-[#10b981] border-2 border-emerald-400 shadow-[0_0_40px_rgba(16,185,129,0.4)] scale-[1.02]' : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'}`}>
+                      <cat.icon size={36} strokeWidth={1.5} className={`transition-colors duration-400 ${isActive ? 'text-black' : 'text-zinc-400 group-hover:text-white'}`} />
+                      <span className={`text-[11px] font-black uppercase tracking-widest transition-colors duration-400 ${isActive ? 'text-black' : 'text-zinc-400 group-hover:text-white'}`}>{cat.id}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
 
-            <div className={`relative transition-all duration-700 ${isLocationSelected ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}>
-              <StepNode active={isLocationSelected || currentProgress > 1} />
-              <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 2: Adres i Mapa</h2>
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl">
-                <div className="relative flex bg-[#0a0a0a] p-1.5 rounded-full mb-8 border border-white/5 shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] z-10 max-w-sm mx-auto">
-                  <div className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-full transition-transform duration-500 ease-out z-0 bg-gradient-to-b from-white/10 to-transparent border border-white/10 backdrop-blur-xl shadow-[0_8px_20px_rgba(0,0,0,0.5),inset_0_2px_5px_rgba(255,255,255,0.2)]" style={{ transform: data.locationType === 'exact' ? 'translateX(0)' : 'translateX(100%)' }} />
-                  <button onClick={() => updateData({ locationType: 'exact' })} className={`flex-1 py-3 text-[10px] md:text-xs font-black uppercase tracking-[0.15em] relative z-10 transition-all duration-500 ${data.locationType === 'exact' ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'text-zinc-600 hover:text-zinc-400'}`}>Szpilka na Mapie</button>
-                  <button onClick={() => updateData({ locationType: 'approximate' })} className={`flex-1 py-3 text-[10px] md:text-xs font-black uppercase tracking-[0.15em] relative z-10 transition-all duration-500 ${data.locationType === 'approximate' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-zinc-600 hover:text-zinc-400'}`}>Radar Okolicy</button>
+              <div className="relative">
+                <label className={labelPremium}>Tytuł Ogłoszenia (Opcjonalnie)</label>
+                <input type="text" placeholder="Napisz chwytliwy tytuł (np. Słoneczny apartament z widokiem...)" className={inputPremium} onChange={(e) => updateData({ title: e.target.value })} value={data.title || ''} />
+                <p className="text-[10px] text-zinc-500 mt-2 ml-1">Jeśli zostawisz puste, wygenerujemy tytuł automatycznie na podstawie typu i lokalizacji.</p>
+              </div>
+            </section>
+
+            {/* KROK 2: LOKALIZACJA I MAPA */}
+            <section className={`${glassPanel} ${isTypeSelected ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+              <div className="flex items-center gap-5 mb-10">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all duration-500 ${isLocationDone ? 'bg-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110' : 'bg-white/5 text-zinc-500 border border-white/10'}`}>
+                  {isLocationDone ? <Check size={24} /> : '2'}
                 </div>
-                <div className="relative mb-6 z-50">
-                  <label className={labelPremium}>Wyszukaj Adres w Warszawie</label>
-                  <MapPin className="absolute left-5 top-[42px] text-emerald-500" size={20} />
-                  <input type="text" placeholder="Wpisz ulicę, dzielnicę..." className={`${inputPremium} pl-14`} onChange={(e) => handleAddressSearch(e.target.value)} value={data.address || ''} />
-                  {addressSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#161616] border border-emerald-500/30 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 p-2">
-                      {addressSuggestions.map((f, i) => (
-                        <div key={i} onClick={() => selectAddress(f)} className="p-4 rounded-lg hover:bg-emerald-500/20 cursor-pointer text-white font-medium transition-colors">{f.place_name_pl || f.text}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="w-full h-80 rounded-2xl overflow-hidden bg-[#111] border border-white/5 relative z-0 mb-8">
-                  <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" style={{ minHeight: "400px" }} />
-                </div>
-                <div className="w-full h-px bg-gradient-to-r from-transparent via-white/5 to-transparent mb-8"></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                  <div>
-                    <label className={labelPremium}>Dzielnica Warszawy *</label>
-                    <div className="relative">
-                      <MapIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-500" size={20} />
-                      <select className={`${inputPremium} pl-14 appearance-none cursor-pointer`} value={data.district || ''} onChange={(e) => updateData({ district: e.target.value })}>
-                        <option value="" disabled>Wybierz dzielnicę...</option>
+                <h2 className="text-2xl font-black uppercase tracking-widest text-white">Lokalizacja i Mapa</h2>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="space-y-8">
+                  
+                  <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+                    <button onClick={() => updateData({ locationType: 'exact' })} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${data.locationType === 'exact' ? 'bg-[#10b981] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}><MapPin size={16}/> Dokładna (Szpilka)</button>
+                    <button onClick={() => updateData({ locationType: 'approximate' })} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${data.locationType === 'approximate' ? 'bg-[#10b981] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}><Navigation size={16}/> Przybliżona (Dysk)</button>
+                  </div>
+                  
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-xs text-zinc-400 leading-relaxed">
+                    <strong className="text-white">Widoczność publiczna:</strong> Przy <em>Dokładnej lokalizacji</em> wyświetlimy nazwę ulicy (i nr budynku dla mieszkań). Przy <em>Przybliżonej</em> pokazujemy jedynie orientacyjny obszar dzielnicy.
+                  </div>
+
+                  <div className="relative z-50">
+                    <label className={labelPremium}>Wyszukaj Adres *</label>
+                    <input type="text" placeholder="Np. Złota 44..." className={inputPremium} onChange={(e) => handleAddressSearch(e.target.value)} value={data.address || ''} />
+                    {data.address && !hasBuildingNumber && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 text-[11px] font-bold text-red-400 flex items-center gap-1"><AlertCircle size={14} /> Wymagany numer budynku przed przecinkiem.</motion.div>
+                    )}
+                    {addressSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-50 overflow-hidden divide-y divide-white/5">
+                        {addressSuggestions.map((f, i) => (
+                          <div key={i} onClick={() => selectAddress(f)} className="p-4 hover:bg-[#10b981]/20 cursor-pointer text-zinc-300 hover:text-white font-medium transition-colors">
+                            {f.place_name_pl || f.text}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelPremium}>Dzielnica *</label>
+                      <select className={`${inputPremium} appearance-none cursor-pointer text-sm`} value={data.district || ''} onChange={(e) => updateData({ district: e.target.value })}>
+                        <option value="" disabled>Wybierz...</option>
                         {["Mokotów", "Praga-Południe", "Wola", "Ursynów", "Bielany", "Śródmieście", "Targówek", "Bemowo", "Ochota", "Wawer", "Praga-Północ", "Białołęka", "Ursus", "Żoliborz", "Włochy", "Wilanów", "Wesoła", "Rembertów", "Poza Warszawą"].map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
-                  </div>
-                  <div>
-                    <label className={labelPremium}>Numer Mieszkania / Lokalu {requiresApartmentNumber ? '*' : ''}</label>
-                    <div className="relative">
-                      <Lock className="absolute left-5 top-4 text-emerald-500" size={20} />
-                      <input type="text" placeholder="Np. 42A" className={`${inputPremium} pl-14`} value={data.apartmentNumber || ''} onChange={(e) => updateData({ apartmentNumber: e.target.value })} />
-                    </div>
-                    <p className="mt-3 text-[10px] text-gray-400 flex items-start gap-2 leading-relaxed">
-                      <Lock size={12} className="text-emerald-500 mt-0.5 shrink-0" />
-                      <span>Nie udostępniamy tego nigdzie publicznie. Adres dokładny podawany jest tylko za wyraźną zgodą właściciela.</span>
-                    </p>
+                    
+                    <AnimatePresence>
+                      {data.propertyType === 'Mieszkanie' && (
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+                          <label className={labelPremium}>Nr Lokalu *</label>
+                          <input type="text" placeholder="Np. 12" className={`${inputPremium} text-sm`} value={data.apartmentNumber || ''} onChange={(e) => updateData({ apartmentNumber: e.target.value })} />
+                          <p className="text-[9px] text-zinc-500 mt-2 flex items-start gap-1"><EyeOff size={12} className="shrink-0 mt-0.5"/> Pole chronione – widoczne tylko po umówieniu prezentacji.</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
+
+                <div className="w-full h-full min-h-[350px] rounded-[2rem] overflow-hidden bg-[#111] border border-white/10 relative shadow-[inset_0_0_50px_rgba(0,0,0,0.5)]">
+                  <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div className={`relative transition-all duration-700 ${isFinanceDone ? 'opacity-100' : 'opacity-50 hover:opacity-100 grayscale-[50%] hover:grayscale-0'}`}>
-              <StepNode active={isFinanceDone || currentProgress > 3} />
-              <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 3: Finanse i Dane</h2>
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                {(() => {
-                  const fields = [
-                    { id: 'price', label: 'Cena Całkowita (PLN)', placeholder: 'Np. 850 000' }, 
-                    { id: 'area', label: 'Powierzchnia (m²)', placeholder: 'Np. 45.5' }
-                  ];
-                  if (['Dom Wolnostojący', 'Segment', 'Działka'].includes(data.propertyType)) {
-                    fields.push({ id: 'plotArea', label: 'Powierzchnia Działki (m²)', placeholder: 'Np. 1200' });
-                  }
-                  if (data.propertyType !== 'Działka') {
-                    fields.push({ id: 'rooms', label: 'Liczba Pokoi', placeholder: 'Np. 3' });
-                    fields.push({ id: 'buildYear', label: 'Rok Budowy', placeholder: 'Np. 2026' });
-                  }
-                  return fields.map(field => (
-                    <div key={field.id}>
-                      <label className={labelPremium}>{field.label}</label>
-                      <input 
-                        type="text" 
-                        className={inputPremium} 
-                        placeholder={field.placeholder} 
-                        value={data[field.id] || ''} 
-                        onChange={(e) => { 
-                          let val = e.target.value;
-                          if (field.id === 'price') val = val.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                          else if (field.id === 'area' || field.id === 'plotArea') val = val.replace(/[^0-9.,]/g, "").replace(',', '.').slice(0, 7);
-                          else if (field.id === 'rooms') val = val.replace(/\D/g, "").slice(0, 2);
-                          else if (field.id === 'buildYear') val = val.replace(/\D/g, "").slice(0, 4);
-                          updateData({ [field.id]: val }); 
-                        }} 
-                      />
+            {/* KROK 3: PARAMETRY I FINANSE */}
+            <section className={`${glassPanel} ${isLocationDone ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+              <div className="flex items-center gap-5 mb-10">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all duration-500 ${isTechDone ? 'bg-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110' : 'bg-white/5 text-zinc-500 border border-white/10'}`}>
+                  {isTechDone ? <Check size={24} /> : '3'}
+                </div>
+                <h2 className="text-2xl font-black uppercase tracking-widest text-white">Parametry Finansowe</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                  <label className={labelPremium}>Cena (PLN) *</label>
+                  <input type="text" className={inputPremium} placeholder="850 000" value={data.price || ''} 
+                    onChange={(e) => updateData({ price: e.target.value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, " ") })} />
+                </div>
+                <div>
+                  <label className={labelPremium}>Metraż (m²) *</label>
+                  <input type="text" className={inputPremium} placeholder="45.5" value={data.area || ''} 
+                    onChange={(e) => updateData({ area: e.target.value.replace(/[^0-9.,]/g, "").replace(',', '.').slice(0, 7) })} />
+                </div>
+                
+                {data.propertyType !== 'Działka' && (
+                  <>
+                    <div>
+                      <label className={labelPremium}>Liczba Pokoi</label>
+                      <input type="text" className={inputPremium} placeholder="3" value={data.rooms || ''} 
+                        onChange={(e) => updateData({ rooms: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
                     </div>
-                  ));
-                })()}
-
+                    {data.propertyType === 'Mieszkanie' && (
+                      <div>
+                        <label className={labelPremium}>Piętro</label>
+                        <input type="text" className={inputPremium} placeholder="Np. 2 lub Parter" value={data.floor || ''} 
+                          onChange={(e) => updateData({ floor: e.target.value })} />
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {requiresPlot && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
+                    <label className={labelPremium}>Powierzchnia Działki (m²) *</label>
+                    <input type="text" className={inputPremium} placeholder="Np. 1200" value={data.plotArea || ''} 
+                      onChange={(e) => updateData({ plotArea: e.target.value.replace(/\D/g, "") })} />
+                  </motion.div>
+                )}
+                
+                {data.propertyType !== 'Działka' && (
+                  <div className={requiresPlot ? 'lg:col-span-2' : ''}>
+                    <label className={labelPremium}>Rodzaj Ogrzewania</label>
+                    <select className={`${inputPremium} appearance-none cursor-pointer`} value={data.heating || ''} onChange={(e) => updateData({ heating: e.target.value })}>
+                      <option value="">Wybierz...</option>
+                      {HEATING_TYPES.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+                
+                {/* AI Monitor Przelicznik */}
                 {(() => {
                   const p = parseInt(String(data.price || '').replace(/\D/g, ''));
                   const a = parseFloat(String(data.area || '').replace(',', '.'));
                   if (!p || !a || a === 0) return null;
                   const ppm = Math.round(p / a);
-                  let config = { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', label: 'Okazja', icon: <Flame size={20} /> };
-                  if (ppm > 15000) config = { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Rynkowa', icon: <CheckCircle size={20} /> };
-                  if (ppm > 25000) config = { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'Luksusowa', icon: <Crown size={20} /> };
+                  let config = { color: 'text-[#10b981]', bg: 'bg-[#10b981]/10', border: 'border-[#10b981]/30', label: 'Okazja Rynkowa', icon: <CheckCircle size={20} /> };
+                  if (ppm > 18000) config = { color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: 'Standard Premium', icon: <Flame size={20} /> };
+                  if (ppm > 25000) config = { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'Segment Luksusowy', icon: <Crown size={20} /> };
                   return (
-                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 col-span-1 md:col-span-2 flex flex-wrap items-center justify-between p-6 rounded-2xl border ${config.bg} ${config.border} shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-md`}>
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className={`mt-4 lg:col-span-4 flex items-center justify-between p-6 rounded-2xl border ${config.bg} ${config.border} backdrop-blur-md`}>
                       <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Analiza: Cena za m²</span>
-                        <span className={`text-3xl font-black tracking-tight ${config.color}`}>{ppm.toLocaleString('pl-PL')} <span className="text-sm font-bold opacity-80">PLN / m²</span></span>
+                        <span className="text-[11px] text-zinc-400 font-black uppercase tracking-widest mb-1">EstateOS AI: Wycena za m²</span>
+                        <span className={`text-3xl font-black tracking-tight ${config.color}`}>{ppm.toLocaleString('pl-PL')} <span className="text-base font-bold opacity-80">PLN</span></span>
                       </div>
-                      <div className={`mt-4 md:mt-0 flex items-center gap-2 px-5 py-3 rounded-xl border ${config.border} bg-[#000]/60 shadow-inner`}>
-                        <span className={`${config.color} animate-pulse`}>{config.icon}</span>
-                        <span className={`text-xs font-black uppercase tracking-widest ${config.color}`}>{config.label}</span>
+                      <div className={`flex items-center gap-3 px-5 py-3 rounded-xl border ${config.border} bg-black/40 shadow-inner`}>
+                        <span className={`${config.color}`}>{config.icon}</span>
+                        <span className={`text-[11px] font-black uppercase tracking-widest ${config.color}`}>{config.label}</span>
                       </div>
                     </motion.div>
                   );
                 })()}
               </div>
-            </div>
+            </section>
 
-            <div className={`relative transition-all duration-700 ${isAmenitiesDone ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}>
-              <StepNode active={isAmenitiesDone || currentProgress > 4} />
-              <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 4: Udogodnienia Inwestycji</h2>
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl flex flex-wrap gap-3 relative z-10">
-                {AMENITIES.map(item => {
-                  const isSelected = data.amenities.includes(item);
-                  return <button key={item} onClick={() => updateData({ amenities: isSelected ? data.amenities.filter((a: string) => a !== item) : [...data.amenities, item] })} className={`px-6 py-4 rounded-xl font-bold uppercase tracking-wider text-[11px] transition-all duration-300 border ${isSelected ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-[#111] border-white/5 text-gray-400 hover:bg-[#161616] hover:border-white/10 hover:text-white'}`}>{item}</button>;
-                })}
+            {/* KROK 4: GALERIA I PREZENTACJA */}
+            <section className={`${glassPanel} ${isTechDone ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+              <div className="flex items-center gap-5 mb-10">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all duration-500 ${isMediaDone ? 'bg-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110' : 'bg-white/5 text-zinc-500 border border-white/10'}`}>
+                  {isMediaDone ? <Check size={24} /> : '4'}
+                </div>
+                <h2 className="text-2xl font-black uppercase tracking-widest text-white">Galeria i Prezentacja</h2>
               </div>
-            </div>
 
-            <div className={`relative transition-all duration-700 ${isMediaDone ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}>
-              <StepNode active={isMediaDone || currentProgress > 5} />
-              <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 5: Galeria i Rzuty</h2>
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl relative z-10">
-                <div className="flex flex-wrap gap-4 mb-8">
-                  <label className="w-28 h-28 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all bg-[#111] hover:border-emerald-500 hover:text-emerald-400 text-gray-500">
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                  <label className={labelPremium}>Galeria Zdjęć (Min. 1) *</label>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${totalSizeMB > 25 ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-zinc-400'}`}>Użyto: {totalSizeMB.toFixed(1)} / 30 MB</span>
+                </div>
+                <div className="flex flex-wrap gap-4 p-6 rounded-[2rem] bg-white/5 border border-white/10 shadow-inner min-h-[180px]">
+                  <label className="w-32 h-32 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all bg-black/20 hover:border-[#10b981] hover:bg-[#10b981]/5 hover:text-[#10b981] text-zinc-500 group">
                     <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    <Upload size={24} className="mb-2" />
-                    <span className="text-[10px] font-black uppercase text-center px-2">Wgraj<br/>Zdjęcia</span>
+                    <Upload size={28} className="mb-3 transition-transform group-hover:-translate-y-1" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">Dodaj<br/>Zdjęcia</span>
                   </label>
-                  <DndContext collisionDetection={closestCenter} onDragEnd={(event) => { const { active, over } = event; if (active.id !== over?.id && over) { setImagesList((items) => arrayMove(items, items.indexOf(active.id as string), items.indexOf(over.id as string))); } }}>
+                  
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => { const { active, over } = e; if (active.id !== over?.id && over) { setImagesList((items) => arrayMove(items, items.indexOf(active.id as string), items.indexOf(over.id as string))); } }}>
                     <SortableContext items={imagesList} strategy={rectSortingStrategy}>
                       {imagesList.map((img, idx) => <SortableItem key={img} id={img} img={img} idx={idx} onRemove={handleRemoveImage} />)}
                     </SortableContext>
                   </DndContext>
                 </div>
-                <div className="w-full h-px bg-gradient-to-r from-transparent via-white/5 to-transparent my-8"></div>
-                <label className={labelPremium}><LayoutTemplate size={14} className="inline mr-2 mb-0.5"/> Plan i Rzut (Opcjonalnie)</label>
-                {!floorPlan ? (
-                  <label className="w-full max-w-sm h-20 border border-dashed rounded-xl flex items-center justify-center gap-4 cursor-pointer transition-all bg-[#111] border-white/10 text-gray-500 hover:border-emerald-500 hover:text-emerald-400 mt-2">
-                    <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFloorPlanUpload} />
-                    <LayoutTemplate size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Wgraj Rzut 2D/3D</span>
-                  </label>
-                ) : (
-                  <div className="relative w-full max-w-sm h-32 rounded-xl overflow-hidden border border-emerald-500/30 shadow-xl mt-2 group">
-                    <img src={floorPlan} className="w-full h-full object-cover opacity-80" alt="Rzut" />
-                    <button onClick={() => { setFloorPlan(null); setFloorPlanFile(null); }} className="absolute top-2 right-2 p-2 bg-red-600/90 rounded-full text-white hover:bg-red-500 transition-all z-20 shadow-lg opacity-0 group-hover:opacity-100"><Trash2 size={14}/></button>
-                  </div>
-                )}
-                
-                <div className="mt-12 relative">
-                  <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-                    <label className={labelPremium}><Sparkles size={14} className="inline mr-2 mb-0.5 text-emerald-500"/> AI Opis</label>
-                    <button onClick={handleGenerateAI} disabled={isGeneratingAI} className="relative group overflow-hidden px-6 py-2.5 rounded-full border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.8)] transition-all duration-300 hover:border-transparent active:scale-95">
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500 opacity-70 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]"></div>
-                      <div className="absolute inset-0 bg-[#0a0a0a] m-[1.5px] rounded-full z-0 transition-opacity duration-300 group-hover:opacity-0"></div>
-                      <div className="relative z-10 flex items-center gap-2 text-[10px] md:text-xs font-black text-white uppercase tracking-[0.2em] drop-shadow-md">
-                        {isGeneratingAI ? <Loader2 size={14} className="animate-spin text-purple-400" /> : <Sparkles size={14} className="text-purple-400 group-hover:text-white transition-colors" />}
-                        {isGeneratingAI ? 'Generowanie...' : 'Użyj AI Siri'}
-                      </div>
+                <p className="text-[10px] text-zinc-500 mt-3 text-center">Możesz dodać dowolną liczbę zdjęć, przeciągnij je aby ułożyć kolejność. Łączna waga plików to max 30 MB.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className={labelPremium}>Ekskluzywny Opis</label>
+                    <button onClick={handleGenerateAI} disabled={isGeneratingAI} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#10b981]/20 to-emerald-900/40 border border-[#10b981]/50 text-[#10b981] text-[11px] font-black uppercase tracking-widest hover:bg-[#10b981] hover:text-black transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                      {isGeneratingAI ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      {isGeneratingAI ? 'Generowanie...' : 'Asystent AI'}
                     </button>
                   </div>
-                  <textarea placeholder="Wpisz lub wygeneruj sprzedażowe arcydzieło..." className={`${inputPremium} h-40 resize-none relative z-10`} onChange={(e) => updateData({ description: e.target.value })} value={data.description || ''}></textarea>
+                  
+                  {/* Edytor Premium */}
+                  <div className="rounded-[2rem] border border-white/10 bg-white/5 overflow-hidden focus-within:border-[#10b981] transition-colors shadow-inner">
+                    <div className="flex items-center gap-2 p-3 border-b border-white/10 bg-black/40">
+                      <button onClick={() => execCommand('bold')} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"><Bold size={16}/></button>
+                      <button onClick={() => execCommand('italic')} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"><Italic size={16}/></button>
+                      <button onClick={() => execCommand('underline')} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"><Underline size={16}/></button>
+                      <div className="w-px h-4 bg-white/10 mx-2"></div>
+                      <button onClick={() => execCommand('formatBlock')} onMouseDown={(e) => { e.preventDefault(); document.execCommand('formatBlock', false, 'H3'); }} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"><Heading size={16}/></button>
+                    </div>
+                    <div 
+                      ref={editorRef}
+                      contentEditable
+                      className="w-full h-64 p-6 outline-none text-[#f5f5f7] leading-relaxed overflow-y-auto"
+                      style={{ minHeight: '16rem' }}
+                      onInput={(e) => updateData({ description: e.currentTarget.innerHTML })}
+                      data-placeholder="Rozpocznij tworzenie luksusowego opisu..."
+                    ></div>
+                  </div>
                 </div>
-              </div>
-            </div>
+                
+                <div className="space-y-8">
+                  <div>
+                    <label className={labelPremium}>Plan Nieruchomości</label>
+                    {!floorPlan ? (
+                      <label className="w-full h-24 border-2 border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-3 cursor-pointer transition-all bg-white/5 hover:border-[#10b981] hover:text-[#10b981] text-zinc-500 group">
+                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFloorPlanUpload} />
+                        <LayoutTemplate size={24} className="group-hover:scale-110 transition-transform"/>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Wgraj Rzut</span>
+                      </label>
+                    ) : (
+                      <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-[#10b981]/50 shadow-[0_0_20px_rgba(16,185,129,0.2)] group">
+                        <img src={floorPlan} className="w-full h-full object-cover opacity-80" alt="Rzut" />
+                        <button onClick={() => { setFloorPlan(null); setFloorPlanFile(null); }} className="absolute top-2 right-2 p-2 bg-red-500/90 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg"><Trash2 size={14}/></button>
+                      </div>
+                    )}
+                  </div>
 
-            {!initialUser?.isLoggedIn && (
-              <div className={`relative transition-all duration-700 ${isContactDone ? 'opacity-100' : 'opacity-50 hover:opacity-100 grayscale-[50%] hover:grayscale-0'}`}>
-                <StepNode active={isContactDone || currentProgress > 6} />
-                <h2 className="text-sm font-black text-emerald-500 uppercase tracking-[0.2em] mb-6">Krok 6: Kontakt i Weryfikacja</h2>
-                <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl relative z-10">
-                  <div className="flex items-start gap-3 mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                    <ShieldCheck className="text-emerald-500 shrink-0 mt-0.5" size={20} />
-                    <p className="text-xs text-emerald-100/70 leading-relaxed">Uzupełnij dane kontaktowe. Jeśli nie masz konta, stworzymy je i wyślemy na podany numer kod SMS.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className={labelPremium}>Imię i Nazwisko *</label>
-                      <div className="relative">
-                        <User className="absolute left-5 top-4 text-emerald-500" size={20} />
-                        <input type="text" className={`${inputPremium} pl-14`} onChange={(e) => updateData({ contactName: e.target.value })} value={data.contactName || ''} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelPremium}>Telefon *</label>
-                      <div className="relative">
-                        <Phone className="absolute left-5 top-4 text-emerald-500" size={20} />
-                        <input type="tel" className={`${inputPremium} pl-14`} onChange={(e) => updateData({ contactPhone: e.target.value })} value={data.contactPhone || ''} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelPremium}>Adres E-mail *</label>
-                      <div className="relative">
-                        <Mail className="absolute left-5 top-4 text-emerald-500" size={20} />
-                        <input type="email" className={`${inputPremium} pl-14`} onChange={(e) => updateData({ email: e.target.value })} value={data.email || ''} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelPremium}>Hasło (Opcjonalne)</label>
-                      <div className="relative">
-                        <Lock className="absolute left-5 top-4 text-emerald-500" size={20} />
-                        <input type="password" placeholder="Zostaw puste dla logowania SMS" className={`${inputPremium} pl-14`} onChange={(e) => updateData({ password: e.target.value })} value={data.password || ''} />
-                      </div>
+                  <div>
+                    <label className={labelPremium}>Udogodnienia (Premium)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {AMENITIES.map(item => {
+                        const isSelected = data.amenities.includes(item);
+                        return (
+                          <button key={item} onClick={() => updateData({ amenities: isSelected ? data.amenities.filter((a: string) => a !== item) : [...data.amenities, item] })} 
+                                  className={`px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${isSelected ? 'bg-[#10b981] text-black border border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.6)] scale-[1.05]' : 'bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 hover:border-white/20'}`}>
+                            {item}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               </div>
+            </section>
+
+            {/* KROK 5: DANE KONTAKTOWE */}
+            {!initialUser?.isLoggedIn && (
+              <section className={`${glassPanel} ${isMediaDone ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                <div className="flex items-center gap-5 mb-10">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg transition-all duration-500 ${isContactDone ? 'bg-[#10b981] text-black shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110' : 'bg-white/5 text-zinc-500 border border-white/10'}`}>
+                    {isContactDone ? <Check size={24} /> : '5'}
+                  </div>
+                  <h2 className="text-2xl font-black uppercase tracking-widest text-white">Profil Ogłoszeniodawcy</h2>
+                </div>
+
+                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full max-w-md mb-8">
+                  <button onClick={() => updateData({ advertiserType: 'private' })} className={`flex-1 py-4 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${data.advertiserType === 'private' ? 'bg-[#10b981] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}>Osoba Prywatna</button>
+                  <button onClick={() => updateData({ advertiserType: 'agency' })} className={`flex-1 py-4 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${data.advertiserType === 'agency' ? 'bg-[#10b981] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}>Agencja / Biuro</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {data.advertiserType === 'agency' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="md:col-span-2">
+                      <label className={labelPremium}>Nazwa Agencji Nieruchomości *</label>
+                      <input type="text" className={inputPremium} onChange={(e) => updateData({ agencyName: e.target.value })} value={data.agencyName || ''} placeholder="Wpisz nazwę biura..." />
+                    </motion.div>
+                  )}
+                  
+                  <div>
+                    <label className={labelPremium}><User size={14}/> Imię i Nazwisko / Agent *</label>
+                    <input type="text" className={inputPremium} onChange={(e) => updateData({ contactName: e.target.value })} value={data.contactName || ''} />
+                  </div>
+                  <div>
+                    <label className={labelPremium}><Phone size={14}/> Telefon *</label>
+                    <div className="relative">
+                      <input type="tel" placeholder="+48 500 600 700" className={`${inputPremium} pr-12 ${phoneStatus === 'invalid' || phoneStatus === 'taken' ? 'border-red-500/50' : ''}`} onChange={handlePhoneChange} value={data.contactPhone || ''} />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {phoneStatus === 'checking' && <Loader2 size={18} className="animate-spin text-zinc-500" />}
+                        {phoneStatus === 'available' && <CheckCircle size={18} className="text-[#10b981]" />}
+                        {(phoneStatus === 'invalid' || phoneStatus === 'taken') && <X size={18} className="text-red-500" />}
+                      </div>
+                    </div>
+                    {phoneStatus === 'taken' && <p className="text-[10px] text-red-400 mt-2 font-bold">Ten numer jest przypisany do innego konta.</p>}
+                  </div>
+                  <div>
+                    <label className={labelPremium}><Mail size={14}/> E-mail *</label>
+                    <div className="relative">
+                      <input type="email" placeholder="jan@kowalski.pl" className={`${inputPremium} pr-12 ${emailStatus === 'invalid' || emailStatus === 'taken' ? 'border-red-500/50' : ''}`} onChange={(e) => updateData({ email: e.target.value })} value={data.email || ''} />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {emailStatus === 'checking' && <Loader2 size={18} className="animate-spin text-zinc-500" />}
+                        {emailStatus === 'available' && <CheckCircle size={18} className="text-[#10b981]" />}
+                        {(emailStatus === 'invalid' || emailStatus === 'taken') && <X size={18} className="text-red-500" />}
+                      </div>
+                    </div>
+                    {emailStatus === 'taken' && <p className="text-[10px] text-red-400 mt-2 font-bold">Adres jest już zajęty. Zaloguj się.</p>}
+                  </div>
+                  <div>
+                    <label className={labelPremium}><Lock size={14}/> Hasło (Min. 6 znaków) *</label>
+                    <input type="password" placeholder="••••••••" className={inputPremium} onChange={(e) => updateData({ password: e.target.value })} value={data.password || ''} />
+                  </div>
+                </div>
+              </section>
             )}
 
-            <div className="pt-12 pb-32 relative z-50 w-full">
+            {/* FINAŁOWY PRZYCISK APPLE LUXURY */}
+            <div className="pt-16 pb-24 relative z-50">
               <button 
                 onClick={handleSubmit} 
                 disabled={isSubmitting || !canPublish} 
-                className={`relative w-full py-6 md:py-8 rounded-[2rem] text-lg md:text-xl font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all duration-500 overflow-hidden group ${
+                className={`w-full py-6 md:py-8 rounded-[2rem] flex items-center justify-center gap-4 transition-all duration-500 overflow-hidden relative group font-sans ${
                   (!canPublish || isSubmitting)
-                    ? 'bg-[#111] text-zinc-600 border border-white/5 shadow-[inset_0_4px_20px_rgba(0,0,0,1)] cursor-not-allowed'
-                    : 'bg-emerald-500 text-black border border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_50px_rgba(16,185,129,0.8)] hover:bg-emerald-400 hover:-translate-y-1'
+                    ? 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed backdrop-blur-md'
+                    : 'bg-white/10 border border-white/20 text-[#f5f5f7] cursor-pointer backdrop-blur-xl hover:bg-[#10b981] hover:border-[#10b981] hover:text-black shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] hover:scale-[1.02] active:scale-95'
                 }`}
               >
-                {canPublish && !isSubmitting && (
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent opacity-50 z-0 pointer-events-none rounded-[2rem]"></div>
-                )}
-                <span className="relative z-10 flex items-center justify-center gap-3 drop-shadow-sm">
-                  {isSubmitting ? <Loader2 className="animate-spin" size={28} /> : (!canPublish ? <Lock size={24} className="text-zinc-600" /> : <Crown size={28} className="transition-transform duration-500 group-hover:scale-125" />)}
-                  {isSubmitting ? (uploadProgress || 'WERYFIKACJA...') : 'ZAKOŃCZ I OPUBLIKUJ'}
+                <span className="relative z-10 flex items-center gap-3 text-xl md:text-2xl font-black uppercase tracking-[0.2em]">
+                  {isSubmitting ? <Loader2 className="animate-spin" size={28} /> : (!canPublish ? <Lock size={24} /> : <Crown size={32} className="group-hover:animate-bounce" />)}
+                  {isSubmitting ? (uploadProgress || 'Przetwarzanie...') : (!canPublish ? 'Uzupełnij brakujące dane' : 'ZAKOŃCZ I OPUBLIKUJ')}
                 </span>
               </button>
             </div>
 
-          </div>
+        </div>
       </div>
 
+      
+      {/* 1. STANDARDOWE OKNA (BŁĄD, LIMIT, SUKCES ZWYKŁY) */}
       <AnimatePresence>
-        {actionModal !== "none" && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 md:p-14 max-w-xl w-full shadow-2xl relative overflow-hidden">
-              <button onClick={() => setActionModal("none")} className="absolute top-8 right-8 text-white/40 hover:text-white"><X size={28} /></button>
+        {actionModal !== "none" && actionModal !== "payment_success" && actionModal !== "oferta_plus" && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative text-center">
+              <button onClick={() => setActionModal("none")} className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
               
               {actionModal === "success" && (
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><CheckCircle className="text-emerald-400" size={36} /></div>
-                  <h2 className="text-4xl font-black text-white mb-8">Gotowe!</h2>
-                  <p className="text-gray-400 mb-8">Twoja oferta została pomyślnie dodana i czeka na weryfikację.</p>
-                  <button onClick={() => window.location.href = '/crm'} className="w-full py-5 bg-emerald-500 text-black font-black uppercase rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:bg-emerald-400 transition-colors">Przejdź do Panelu</button>
-                </div>
+                <>
+                  <div className="w-24 h-24 bg-[#10b981]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#10b981]/30 shadow-[0_0_40px_rgba(16,185,129,0.3)]"><CheckCircle className="text-[#10b981]" size={40} /></div>
+                  <h2 className="text-3xl font-black text-white mb-4">Gotowe!</h2>
+                  <p className="text-zinc-400 mb-8 leading-relaxed">Ekskluzywna oferta została dodana do bazy i oczekuje na weryfikację.</p>
+                  <button onClick={() => { window.location.href = '/moje-konto/crm'; }} className="w-full py-4 bg-white/10 border border-white/20 text-white hover:bg-[#10b981] hover:text-black font-black uppercase tracking-widest rounded-2xl transition-all duration-300">Panel Zarządzania</button>
+                </>
               )}
 
               {actionModal === "error" && (
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]"><AlertCircle className="text-red-500" size={36} /></div>
-                  <h2 className="text-3xl md:text-4xl font-black text-white mb-4">Wystąpił Błąd</h2>
-                  <p className="text-gray-400 mb-8 leading-relaxed">System nie mógł przetworzyć tej oferty. Upewnij się, że wszystkie dane są poprawne, lub spróbuj ponownie za chwilę.</p>
-                  <button onClick={() => setActionModal("none")} className="w-full py-5 bg-[#111] hover:bg-[#161616] border border-white/10 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg">Wróć do formularza</button>
-                </div>
+                <>
+                  <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30"><AlertCircle className="text-red-500" size={40} /></div>
+                  <h2 className="text-3xl font-black text-white mb-4">Odrzucono</h2>
+                  <p className="text-zinc-400 mb-8 leading-relaxed">{serverErrorMessage || "Sprawdź poprawność wprowadzonych danych."}</p>
+                  <button onClick={() => setActionModal("none")} className="w-full py-4 bg-white/10 border border-white/20 text-white hover:bg-red-500 font-black uppercase tracking-widest rounded-2xl transition-all duration-300">Popraw dane</button>
+                </>
               )}
 
               {actionModal === "limit" && (
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-br from-[#cba052]/20 to-[#a37b35]/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-[#cba052]/30 shadow-[0_0_30px_rgba(203,160,82,0.2)] backdrop-blur-sm"><Crown className="text-[#cba052]" size={36} /></div>
-                  <h2 className="text-3xl md:text-4xl font-black text-white mb-4 drop-shadow-lg">Wymagany Pakiet</h2>
-                  <p className="text-gray-400 mb-8 leading-relaxed text-sm">Wykorzystałeś darmowy limit ogłoszeń dla tego konta. Odblokuj pełen zasięg EstateOS i opublikuj tę ofertę, wykupując jednorazowy dostęp.</p>
-                  <button onClick={() => window.location.href = '/cennik'} className="w-full py-6 bg-gradient-to-r from-[#cba052] to-[#a37b35] hover:from-[#d9b165] hover:to-[#b38a42] text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_10px_30px_rgba(203,160,82,0.3)] hover:shadow-[0_15px_40px_rgba(203,160,82,0.5)]"><Crown className="inline mr-2 mb-1" size={20} /> Opublikuj za 29 PLN</button>
-                </div>
+                <>
+                  <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.3)]"><Sparkles className="text-blue-400" size={40} /></div>
+                  <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Osiągnięto Limit</h2>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 mb-6 animate-pulse">⚡ Oferta Limitowana</div>
+                  <p className="text-zinc-400 mb-8 leading-relaxed font-medium">Odblokuj to ogłoszenie w specjalnej cenie: <br/><span className="text-zinc-600 line-through text-lg mr-2 decoration-red-500/40">49,99 zł</span><span className="text-white font-black text-3xl">29,99 zł</span></p>
+                  <button onClick={() => { window.location.href = data.email ? `https://buy.stripe.com/6oEbL7eRk30V15S5km?prefilled_email=${encodeURIComponent(data.email)}` : "https://buy.stripe.com/6oEbL7eRk30V15S5km"; }} className="w-full py-5 bg-blue-600 text-white font-black uppercase tracking-[0.2em] rounded-[1.5rem] transition-all duration-300 hover:bg-blue-500 hover:brightness-125 shadow-xl flex flex-col items-center justify-center">
+                    <span>ODBLOKUJ I OPUBLIKUJ</span><span className="text-[9px] opacity-70 mt-1 font-bold">AUTOPUBLIKACJA PO PŁATNOŚCI</span>
+                  </button>
+                  <button onClick={() => setActionModal("none")} className="mt-6 text-[10px] text-zinc-500 uppercase tracking-widest font-bold hover:text-white transition-colors">Wróć do edycji</button>
+                </>
               )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* 2. RYTUAŁ PRO (ROLLS ROYCE) */}
+      {actionModal === "payment_success" && (
+        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-black overflow-hidden font-sans m-0 p-0" style={{ margin: '-40px' }}>
+          
+          {/* FAZA 1: Kosmiczne Zaćmienie (Apple Keynote Style) */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, delay: 4.2 }}
+              className="absolute inset-0 flex items-center justify-center z-10"
+            >
+              {/* Obracająca się korona zaćmienia (Tytanowy blask) */}
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: [0.5, 1.2, 0.05], opacity: [0, 1, 1], rotate: 180 }}
+                transition={{ duration: 4, times: [0, 0.7, 1], ease: [0.25, 1, 0.5, 1] }}
+                className="absolute w-72 h-72 md:w-96 md:h-96 rounded-full border-[1px] border-white/20 shadow-[0_0_80px_rgba(255,255,255,0.15)] flex items-center justify-center"
+              >
+                {/* Oślepiająca flara na krawędzi */}
+                <motion.div className="absolute top-0 w-24 h-1 md:w-32 md:h-2 bg-white rounded-full blur-[4px] shadow-[0_0_30px_rgba(255,255,255,1)]" />
+              </motion.div>
+
+              {/* Osobliwość - zapada się i eksploduje czystym światłem */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 0.2, 0.5, 50], opacity: [0, 1, 1, 0] }}
+                transition={{ duration: 4.5, times: [0, 0.6, 0.9, 1], ease: "easeInOut" }}
+                className="absolute w-6 h-6 md:w-10 md:h-10 bg-white rounded-full blur-[2px] shadow-[0_0_100px_rgba(255,255,255,1)]"
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* FAZA 2: Bezszelestna Szklana Fala Uderzeniowa (Glassmorphism Wave) */}
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: [0, 1, 0], scale: [0.2, 3] }}
+              transition={{ duration: 2.5, delay: 3.8, ease: "easeOut" }}
+              className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+            >
+              <div className="w-[150vw] h-[150vw] rounded-full border-[15vw] border-white/5 backdrop-blur-2xl" />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* FAZA 3: Monolit PRO (Apple Typography) */}
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 2, delay: 4.5 }}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center font-sans"
+            >
+              {/* Bardzo subtelne tło studyjne (ciemny grafit, jak tył iPhone Pro) */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(20,20,22,1)_0%,rgba(0,0,0,1)_80%)]" />
+
+              <motion.div
+                initial={{ scale: 0.9, y: 30, opacity: 0, filter: "blur(15px)" }}
+                animate={{ scale: 1, y: 0, opacity: 1, filter: "blur(0px)" }}
+                transition={{ duration: 2.5, delay: 4.8, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-10 flex flex-col items-center text-center px-6"
+              >
+                {/* Tytanowy napis PRO. (Gruby, ciasny tracking) */}
+                <div className="relative mb-2 overflow-visible">
+                  <h1 className="text-[120px] md:text-[200px] font-semibold tracking-[-0.05em] text-transparent bg-clip-text bg-gradient-to-b from-[#ffffff] via-[#e2e2e2] to-[#666666] drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] leading-none px-4" style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    PRO.
+                  </h1>
+                  
+                  {/* Efekt skanowania światłem (Light Sweep) po literach */}
+                  <motion.div
+                    initial={{ x: '-150%', opacity: 0 }}
+                    animate={{ x: '150%', opacity: [0, 0.5, 0] }}
+                    transition={{ duration: 3.5, delay: 6.8, ease: "easeInOut" }}
+                    className="absolute inset-0 top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 blur-[8px] mix-blend-overlay pointer-events-none"
+                  />
+                </div>
+
+                <motion.p
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1.5, delay: 5.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="text-xl md:text-3xl text-[#a1a1a6] font-normal tracking-wide max-w-2xl mt-4"
+                >
+                  Witamy w absolutnej elicie <span className="text-white font-medium">EstateOS</span>.
+                </motion.p>
+
+                {/* Luksusowy przycisk w stylu Apple (Frost Glass) */}
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 1.5, delay: 6.8, ease: [0.16, 1, 0.3, 1] }}
+                  onClick={() => { window.location.href = '/moje-konto/crm'; }}
+                  className="mt-16 px-12 py-5 btn-apple-glass text-sm md:text-base font-bold tracking-[0.2em] uppercase rounded-full group"
+                >
+                  <span className="relative z-10 transition-transform duration-500 group-hover:scale-105 inline-block">Rozpocznij</span>
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
+
+      {actionModal === "oferta_plus" && (
+        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#030712] overflow-hidden font-sans m-0 p-0" style={{ margin: '-40px' }}>
+          <AnimatePresence mode="wait">
+            <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1, delay: 3.5 }} className="absolute inset-0 flex items-center justify-center z-10">
+              <motion.div animate={{ opacity: [0, 0.4, 0] }} transition={{ duration: 3, ease: "easeInOut" }} className="absolute inset-0 bg-blue-600/30 blur-[150px] rounded-full" />
+              
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                {[...Array(24)].map((_, i) => {
+                  const angle = (i / 24) * Math.PI * 2;
+                  const distance = Math.random() * 350 + 150;
+                  return (
+                    <motion.div key={'card'+i} initial={{ scale: 0, x: 0, y: 0, opacity: 0, rotate: 0 }} animate={{ x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, scale: [0, 1, 1.2, 0.8], opacity: [0, 1, 0.8, 0], rotate: Math.random() * 180 - 90 }} transition={{ duration: 2.2, ease: "easeOut", delay: 1 + (i * 0.05) }} className="absolute w-32 h-44 bg-[#0f172a] border border-blue-500/30 rounded-xl flex flex-col p-2">
+                      <div className="w-full h-1/2 bg-[#1e293b] rounded-md mb-2 flex items-center justify-center"><Home className="text-blue-500/30" size={24} /></div>
+                      <div className="w-3/4 h-2 bg-[#334155] rounded-full mb-1"></div>
+                      <div className="w-1/2 h-2 bg-[#334155] rounded-full"></div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              <motion.div initial={{ scale: 0, y: 50 }} animate={{ scale: [0, 1, 1.05, 1, 0], opacity: [0, 1, 1, 1, 0] }} transition={{ duration: 3.5, times: [0, 0.15, 0.3, 0.8, 1], ease: "easeInOut" }} className="relative w-56 h-80 bg-gradient-to-br from-[#0f172a] to-black border border-blue-400/50 rounded-2xl shadow-[0_0_80px_rgba(59,130,246,0.6)] flex flex-col p-4 z-20">
+                <div className="w-full h-1/2 bg-gradient-to-b from-[#1e293b] to-[#0f172a] rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
+                   <Home className="text-blue-400 relative z-10" size={50} />
+                </div>
+                <div className="w-full h-3 bg-[#334155] rounded-full mb-3"></div>
+                <div className="w-4/5 h-3 bg-[#334155] rounded-full mb-3"></div>
+                <div className="w-full h-10 bg-blue-600/20 border border-blue-500/30 rounded-lg flex items-center justify-center mt-auto">
+                   <span className="text-blue-400 font-bold text-xs">PLUS+ LISTING</span>
+                </div>
+              </motion.div>
+
+              {/* LATAJĄCE PLUSIKI JAK KONFETTI */}
+              <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden">
+                {[...Array(120)].map((_, i) => {
+                  const angle = Math.random() * Math.PI * 2;
+                  const distance = Math.random() * 800 + 100;
+                  return (
+                    <motion.div
+                      key={'plus'+i}
+                      className="absolute font-black drop-shadow-[0_0_15px_rgba(96,165,250,0.9)]"
+                      style={{ color: Math.random() > 0.5 ? '#60a5fa' : '#38bdf8', fontSize: Math.random() * 30 + 20 + 'px' }}
+                      initial={{ x: '50vw', y: '50vh', scale: 0, opacity: 1, rotate: 0 }}
+                      animate={{ x: `calc(50vw + ${Math.cos(angle) * distance}px)`, y: `calc(50vh + ${Math.sin(angle) * distance}px)`, scale: [0, Math.random() * 1.5 + 0.5, 0], opacity: [1, 1, 0], rotate: Math.random() * 720 - 360 }}
+                      transition={{ duration: 2.5 + Math.random(), ease: "easeOut", delay: 1.8 }}
+                    >
+                      +
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <AnimatePresence>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 1.2, times: [0, 0.1, 0.8, 1], delay: 3.2, ease: "easeInOut" }} className="absolute inset-0 z-50 bg-gradient-to-br from-white via-blue-100 to-white flex items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 bg-white blur-[100px]" />
+            </motion.div>
+          </AnimatePresence>
+
+          <AnimatePresence>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 2, delay: 3.8 }} className="absolute inset-0 z-40 bg-[#020617] flex flex-col items-center justify-center font-sans">
+              <motion.div initial={{ scale: 0.5, y: 100, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} transition={{ duration: 2.5, delay: 4.0, type: "spring", bounce: 0.3 }} className="relative z-10 flex flex-col items-center text-center px-6 overflow-visible">
+                <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 5.0, type: "spring" }} className="mb-8 px-6 py-2 rounded-full border border-blue-400/50 bg-blue-900/30 flex items-center gap-3">
+                   <Sparkles className="text-blue-300" size={20} />
+                   <span className="text-blue-200 font-bold tracking-[0.3em] uppercase text-xs">Zasięg Zwielokrotniony</span>
+                </motion.div>
+                <div className="relative mb-6 overflow-visible">
+                  <h1 className="text-[60px] md:text-[110px] font-black tracking-tighter italic text-transparent bg-clip-text bg-gradient-to-b from-blue-100 via-white to-blue-500 drop-shadow-[0_0_80px_rgba(59,130,246,0.8)] p-4" style={{ lineHeight: 1 }}>
+                    OFERTA <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-cyan-300">PLUS+</span>
+                  </h1>
+                </div>
+                <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 5.5, duration: 1 }} className="text-2xl md:text-3xl text-zinc-300 font-medium max-w-3xl tracking-wide">
+                  Aktywowana. Twoje ogłoszenie trafia właśnie do <span className="text-white font-bold">tysięcy inwestorów</span>.
+                </motion.p>
+                
+                {/* NAPRAWIONY TAG MOTION.BUTTON ZAMIAST BUTTON */}
+                <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 7.0, duration: 1 }} onClick={() => { window.location.href = '/moje-konto/crm'; }} className="mt-16 px-12 py-6 bg-blue-900/20 border-2 border-blue-500 text-white font-black uppercase tracking-[0.3em] rounded-full hover:bg-blue-600 transition-all duration-500 shadow-[0_0_30px_rgba(59,130,246,0.3)] text-xl relative overflow-hidden group">
+                  <span className="relative z-10 drop-shadow-md">Zobacz Statystyki</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                </motion.button>
+
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </main>
   );
 }
