@@ -14,12 +14,12 @@ export async function POST(req: Request) {
     const ownerId = sessionData.id || sessionCookie.value;
 
     const lead = await prisma.leadTransfer.create({
-      data: { offerId: Number(offerId), ownerId: String(ownerId), agencyId: String(agencyId) }
+      data: { offerId: Number(offerId), ownerId: Number(ownerId), agencyId: Number(agencyId) }
     });
 
     await prisma.notification.create({
       data: {
-        userId: String(agencyId),
+        userId: Number(agencyId),
         title: '💎 Nowy Gorący Lead (Concierge)',
         message: `Zapytanie Concierge: Prywatny inwestor prosi o wycenę i przejęcie oferty. Zaproponuj swoją prowizję w panelu CRM.`,
         type: 'SYSTEM', link: `/moje-konto/crm`

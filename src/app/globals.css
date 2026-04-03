@@ -185,6 +185,21 @@ button.premium-action-btn > * { position: relative; z-index: 10; }
 
 
 @layer components {
+  .btn-apple-glass {
+    @apply relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/10 text-white transition-all duration-500 shadow-[0_0_20px_rgba(255,255,255,0.05)];
+  }
+  .btn-apple-glass:hover {
+    @apply bg-white/20 border-white/40 text-white shadow-[0_0_60px_rgba(255,255,255,0.3)];
+    transform: scale(1.03);
+  }
+  .btn-apple-glass::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ease-in-out pointer-events-none;
+  }
+  .btn-apple-glass:hover::after {
+    @apply translate-x-full;
+  }
+
   .btn-premium-green {
     @apply bg-[#10b981] hover:bg-[#34d399] text-black font-black uppercase tracking-[0.2em] rounded-full transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_rgba(16,185,129,0.6)] hover:scale-105 cursor-pointer;
   }
@@ -245,3 +260,87 @@ input:-webkit-autofill:active {
     transform: scale(1);
 }
 /* ----------------------------------------- */
+
+
+/* ==========================================================================
+   ESTATEOS LUXURY INTERFACE (APPLE STYLE DARK MODE) - V2
+   ========================================================================== */
+
+/* 1. Globalna dynamika (Mocniejszy Zoom i Płynność) */
+button {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease, background-color 0.3s ease, box-shadow 0.3s ease !important;
+  will-change: transform, filter, box-shadow;
+}
+
+/* PODKRĘCONY HOVER: Mocniejsze przybliżenie (1.04 zamiast 1.02) i rozjaśnienie */
+button:hover {
+  transform: scale(1.04) !important;
+  filter: brightness(1.2) !important; 
+}
+
+/* Akcja kliknięcia (odskok) */
+button:active {
+  transform: scale(0.95) !important;
+  filter: brightness(0.8) !important;
+}
+
+/* 2. Domyślne przyciski (Nieaktywne / Tło) - Czytelne szkło */
+.submit-btn,
+button[class*="bg-white/5"],
+button[class*="bg-[#111]"] {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #a1a1aa !important; /* Szary cynk - widoczny, ale nie dominujący */
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Hover dla nieaktywnych */
+.submit-btn:hover,
+button[class*="bg-white/5"]:hover,
+button[class*="bg-[#111]"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.1) !important; 
+}
+
+/* ==========================================================================
+   3. STAN ZAZNACZONY (PERFEKCYJNA WIDOCZNOŚĆ)
+   Wychwytuje zaznaczone przyciski (np. w kroku 1 i 4)
+   ========================================================================== */
+button[class*="bg-[#10b981]"] {
+  background-color: rgba(16, 185, 129, 0.15) !important; /* Przyciemnione, zielone szkło */
+  border: 2px solid #10b981 !important; /* Gruba, neonowa ramka wskazująca aktywność */
+  color: #ffffff !important; /* Wymuszony BIAŁY tekst dla maksymalnego kontrastu */
+  
+  /* Klucz do sukcesu: Głęboki cień WEWNĘTRZNY (inset) dający efekt wciśnięcia w ekran */
+  box-shadow: inset 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(16, 185, 129, 0.2) !important; 
+  transform: scale(0.97) !important; /* Przycisk "siedzi" głębiej w ekranie */
+}
+
+/* Wymuszenie białego koloru na ikonach (SVG) wewnątrz zaznaczonego przycisku */
+button[class*="bg-[#10b981]"] * {
+  color: #ffffff !important;
+}
+
+/* Hover po zaznaczonym przycisku */
+button[class*="bg-[#10b981]"]:hover {
+  transform: scale(1.01) !important; /* Lekko "odbija" do góry przy najechaniu */
+  background-color: rgba(16, 185, 129, 0.25) !important;
+  box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Obsługa placeholdera dla edytora tekstu Premium */
+[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: #71717a;
+  pointer-events: none;
+  display: block;
+}
+
+@keyframes scan {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+

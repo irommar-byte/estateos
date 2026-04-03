@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 
     // LOGIKA 1: Nowa propozycja to ZAWSZE ruch po stronie Sprzedającego
     if (appointment.status === 'PROPOSED') {
-        const isMyTurn = (currentUserId === String(appointment.sellerId) || currentUserId === appointment.sellerId);
+        const isMyTurn = (Number(currentUserId) === appointment.sellerId);
         return NextResponse.json({ isMyTurn });
     }
 

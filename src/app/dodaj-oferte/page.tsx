@@ -52,6 +52,8 @@ export default async function AddOfferPage() {
           name: realUser.name, 
           phone: realUser.phone, 
           email: realUser.email,
+          role: realUser.role,
+          isPro: realUser.isPro,
           limitReached: limitReached 
         };
       }

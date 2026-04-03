@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     // KULOODPORNA BLOKADA: Sprawdzamy czy klient już nie zapytał o tę ofertę
     const existing = await prisma.appointment.findFirst({
-      where: { offerId: String(offerId), buyerId: finalBuyerId }
+      where: { offerId: parseInt(offerId, 10), buyerId: parseInt(String(finalBuyerId), 10) }
     });
 
     if (existing) {
@@ -44,18 +44,31 @@ export async function POST(req: Request) {
 
     const appointment = await prisma.appointment.create({
       data: {
-        offerId: String(offerId),
-        buyerId: finalBuyerId,
-        sellerId: String(sellerId),
+        offerId: parseInt(offerId, 10),
+        buyerId: parseInt(String(finalBuyerId), 10),
+        sellerId: parseInt(String(sellerId), 10),
         proposedDate: parsedDate,
         message: message ? String(message) : null,
         status: 'PROPOSED'
       }
     });
+    
+    // --- INIEKCJA: Wiadomość Systemowa do Deal Roomu ---
+    try {
+        await prisma.dealMessage.create({
+            data: {
+                dealId: `${offerId}_${finalBuyerId}`,
+                senderId: 'SYSTEM',
+                senderName: 'EstateOS AI',
+                text: `📅 Zaproponowano termin spotkania: ${parsedDate.toLocaleDateString('pl-PL')} o ${parsedDate.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'})}`
+            }
+        });
+    } catch(e) { console.log('DealMessage err', e); }
+    
 
     await prisma.notification.create({
       data: {
-        userId: String(sellerId),
+        userId: Number(sellerId),
         title: 'Nowe zapytanie z Lejka!',
         message: 'Klient chce obejrzeć Twoją nieruchomość.',
         type: 'APPOINTMENT',
@@ -65,18 +78,19 @@ export async function POST(req: Request) {
 
     // WYSYŁKA E-MAIL (Zgodna z istniejącym szablonem EstateOS)
     
-    const safeHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST || '';
-    const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT) || 587;
-    const safeUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || '';
-    const safePass = process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD || '';
+    // Wymuszona konfiguracja Resend z pliku .env
+    const safeHost = process.env.EMAIL_HOST || 'smtp.resend.com';
+    const smtpPort = Number(process.env.EMAIL_PORT) || 465;
+    const safeUser = process.env.EMAIL_USER || 'resend';
+    const safePass = process.env.EMAIL_PASSWORD || process.env.RESEND_API_KEY || '';
 
     const transporter = nodemailer.createTransport({
-          host: safeHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: safeUser, pass: safePass },
-          tls: { rejectUnauthorized: false }
-        });
+      host: safeHost,
+      port: smtpPort,
+      secure: true, // Zawsze true dla portu 465
+      auth: { user: safeUser, pass: safePass },
+      tls: { rejectUnauthorized: false }
+    });
 
     const seller = await prisma.user.findUnique({ where: { id: Number(sellerId) }, select: { email: true } });
     if (seller && seller.email) {

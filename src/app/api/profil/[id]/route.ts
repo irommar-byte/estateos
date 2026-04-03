@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!user) return NextResponse.json({ error: 'Nie znaleziono użytkownika' }, { status: 404 });
 
     const reviews = await prisma.review.findMany({
-      where: { targetId: userIdStr },
+      where: { targetId: Number(userIdStr) },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -23,8 +23,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const appointments = await prisma.appointment.findMany({
       where: {
         OR: [
-          { sellerId: userIdStr },
-          { buyerId: userIdStr }
+          { sellerId: Number(userIdStr) },
+          { buyerId: Number(userIdStr) }
         ]
       }
     });

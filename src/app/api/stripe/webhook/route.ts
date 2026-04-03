@@ -34,12 +34,61 @@ export async function POST(req: Request) {
 
       const customerEmail = session.customer_details?.email;
       const rawPlanType = session.metadata?.plan_type || '';
-      const pendingOfferId = session.metadata?.pending_offer_id;
       const offerIdToRenew = session.metadata?.offer_id_to_renew;
+
+      if (rawPlanType === 'pakiet_plus' && session.metadata?.offer_payload) {
+        try {
+          const payload = JSON.parse(session.metadata.offer_payload);
+
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
+
+          const user = customerEmail ? await prisma.user.findUnique({ where: { email: customerEmail } }) : null;
+
+          if (user) {
+            await prisma.offer.create({
+              data: {
+                userId: user.id,
+                title: payload.title,
+                propertyType: payload.propertyType || "Mieszkanie",
+                district: payload.district || "Śródmieście",
+                price: String(payload.price || "0"),
+                area: String(payload.area || "0"),
+                description: payload.description || "",
+                address: payload.address || "",
+                imageUrl: payload.imageUrl || "",
+                images: payload.images || "",
+                contactName: payload.contactName || "",
+                contactPhone: payload.contactPhone || "",
+                status: "active",
+                lat: parseFloat(payload.lat) || 52.2297,
+                lng: parseFloat(payload.lng) || 21.0122,
+                advertiserType: payload.advertiserType || "private",
+                rooms: String(payload.rooms || ""),
+                floor: String(payload.floor || ""),
+                year: String(payload.buildYear || ""),
+                amenities: payload.amenities || "",
+                floorPlan: payload.floorPlan || null,
+                transactionType: payload.transactionType || "sale",
+                rentAdminFee: payload.rentAdminFee || null,
+                deposit: payload.deposit || null,
+                rentMinPeriod: payload.rentMinPeriod || null,
+                rentAvailableFrom: payload.rentAvailableFrom || null,
+                petsAllowed: Boolean(payload.petsAllowed),
+                rentType: payload.rentType || null,
+                expiresAt
+              }
+            });
+          }
+        } catch (e) {
+          console.error("❌ Błąd tworzenia oferty (pakiet_plus):", e);
+        }
+      }
+
 
       if (customerEmail) {
 
-        if (rawPlanType === 'pakiet_plus' || rawPlanType === 'renewal') {
+        if (rawPlanType === 'renewal') {
           console.log(`🛒 Pakiet+: ${customerEmail}`);
         } else {
           let validPlanType: 'INVESTOR' | 'AGENCY' | 'NONE' = 'INVESTOR';
@@ -61,18 +110,6 @@ export async function POST(req: Request) {
           });
         }
 
-        if (pendingOfferId) {
-          const offerExpiresAtDate = new Date();
-          offerExpiresAtDate.setDate(offerExpiresAtDate.getDate() + 30);
-
-          await prisma.offer.updateMany({
-            where: { id: Number(pendingOfferId) },
-            data: {
-              status: 'pending_approval',
-              expiresAt: offerExpiresAtDate
-            }
-          });
-        }
 
         if (rawPlanType === 'renewal' && offerIdToRenew) {
           const newExpiresAt = new Date();

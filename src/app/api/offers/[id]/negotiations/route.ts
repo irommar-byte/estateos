@@ -11,7 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Szukamy tylko aktywnych negocjacji (Nowa propozycja lub Odbijanie piłeczki)
     const activeNegotiationsCount = await prisma.appointment.count({
       where: { 
-        offerId: offerId,
+        offerId: Number(offerId),
         status: { in: ['PROPOSED', 'COUNTER'] }
       }
     });

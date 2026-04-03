@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const finalUserId = String(dbUserId || email);
 
     const notifications = await prisma.notification.findMany({
-      where: { userId: finalUserId },
+      where: { userId: Number(finalUserId) },
       orderBy: { createdAt: 'desc' },
       take: 20 // Pobieramy 20 najnowszych
     });
@@ -59,7 +59,7 @@ export async function PATCH(req: Request) {
     try { userId = decryptSession(sessionCookie.value).id || userId; } catch(e){}
 
     await prisma.notification.updateMany({
-      where: { userId: String(userId), isRead: false },
+      where: { userId: Number(userId), isRead: false },
       data: { isRead: true }
     });
 

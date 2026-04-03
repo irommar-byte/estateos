@@ -19,6 +19,7 @@ export default function InteractiveMap() {
   
   // NOWY STAN: Tryb Rynku (all, private, agency)
   const [marketMode, setMarketMode] = useState<'all' | 'private' | 'agency'>('all');
+  const [transactionMode, setTransactionMode] = useState<'all' | 'sale' | 'rent'>('sale');
   
   const [filterDistrict, setFilterDistrict] = useState("Wybierz");
   const [filterType, setFilterType] = useState("Wybierz");
@@ -212,6 +213,20 @@ export default function InteractiveMap() {
              <span className="relative z-10 flex items-center gap-1.5"><Crown size={14}/> Eksperci PRO</span>
            </button>
         </div>
+
+
+        {/* NOWY PRZEŁĄCZNIK KUPNO / WYNAJEM */}
+        <div className="relative z-50 mb-4 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-full p-1 flex shadow-[0_10px_30px_rgba(0,0,0,0.5)] scale-90 sm:scale-100">
+           <button onClick={() => setTransactionMode('sale')} className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all relative flex items-center gap-1.5 ${transactionMode === 'sale' ? 'text-black' : 'text-emerald-500/70 hover:text-emerald-500'}`}>
+             {transactionMode === 'sale' && <motion.div layoutId="transactionTab" className="absolute inset-0 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.3)] -z-10" />}
+             <span className="relative z-10">Na Sprzedaż</span>
+           </button>
+           <button onClick={() => setTransactionMode('rent')} className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all relative flex items-center gap-1.5 ${transactionMode === 'rent' ? 'text-black' : 'text-blue-500/70 hover:text-blue-500'}`}>
+             {transactionMode === 'rent' && <motion.div layoutId="transactionTab" className="absolute inset-0 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.3)] -z-10" />}
+             <span className="relative z-10">Na Wynajem</span>
+           </button>
+        </div>
+
 
         {/* PASEK FILTROWANIA */}
         <div className="z-50 w-full max-w-7xl px-8 py-5 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-wrap lg:flex-nowrap items-center gap-6">

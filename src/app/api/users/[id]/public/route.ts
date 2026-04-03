@@ -26,13 +26,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         // 3. Pobieranie opinii (Review.targetId to String)
         const reviews = await prisma.review.findMany({
-            where: { targetId: String(user.id) },
+            where: { targetId: Number(user.id) },
             orderBy: { createdAt: 'desc' }
         });
 
         // 4. Pobieranie statystyk (Appointment.buyerId / sellerId to String)
         const appointments = await prisma.appointment.findMany({
-            where: { OR: [{ buyerId: String(user.id) }, { sellerId: String(user.id) }] },
+            where: { OR: [{ buyerId: Number(user.id) }, { sellerId: Number(user.id) }] },
             select: { status: true }
         });
 

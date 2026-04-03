@@ -3,7 +3,7 @@ import PublicProfileModal from "@/components/PublicProfileModal";
 import { useEffect, useState, useRef, use } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArchiveX, Eye, Shield, Briefcase, Phone, MessageCircle, Video, CheckCircle2, CalendarPlus, Star, Lock, Timer, FileImage, X, Maximize2 , ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { MapPin, ArchiveX, Eye, Shield, Briefcase, Phone, MessageCircle, Video, CheckCircle2, CalendarPlus, Star, Lock, Timer, FileImage, X, Maximize2 , ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import AppointmentModal from "@/components/AppointmentModal";
 import BiddingModal from "@/components/BiddingModal";
 
@@ -12,7 +12,7 @@ function OfferDetails({ offer, currentUser }: { offer: any, currentUser: any }) 
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"]);
   
-  const rawImages = offer.images ? offer.images.split(',') : [];
+  const rawImages = (() => { if (!offer.images) return []; try { const p = JSON.parse(offer.images); return Array.isArray(p) ? p : offer.images.split(','); } catch(e) { return offer.images.split(','); } })();
   const allImages = [offer.imageUrl, ...rawImages].filter((v: string, i: number, a: string[]) => v && v.length > 5 && a.indexOf(v) === i);
   const images = allImages.length > 0 ? allImages : ["/placeholder.jpg"];
 
@@ -105,14 +105,28 @@ function OfferDetails({ offer, currentUser }: { offer: any, currentUser: any }) 
   const priceDisplay = numericPrice > 0 ? numericPrice.toLocaleString('pl-PL') : 'Brak Danych';
   const pricePerSqm = (numericPrice > 0 && numericArea > 0) ? Math.round(numericPrice / numericArea).toLocaleString('pl-PL') : 'Brak';
 
-  const offerParams = [
-    { label: "Lokalizacja", value: isLocked ? 'Ukryta (Off-Market)' : (offer.address || offer.district || 'Brak') },
+    // Sekcje Specyfikacji Luksusowej
+  const locationParams = [
+    { label: "Miejscowość", value: offer.city || 'Warszawa' },
+    { label: "Dzielnica", value: isLocked ? 'Ukryta (Off-Market)' : offer.district },
+    { label: "Adres (Ulica)", value: isLocked ? 'Ukryta (Off-Market)' : offer.address }
+  ].filter(p => p.value);
+
+  const mainParams = [
     { label: "Powierzchnia", value: numericArea > 0 ? `${numericArea} m²` : null },
     { label: "Cena za m²", value: pricePerSqm !== 'Brak' && !isLocked ? `${pricePerSqm} PLN` : (isLocked ? 'Ukryta' : null) },
-    { label: "Typ obiektu", value: offer.propertyType },
     { label: "Liczba pokoi", value: offer.rooms },
     { label: "Piętro", value: offer.floor },
-    { label: "Czynsz", value: offer.rent ? `${offer.rent} PLN` : null }
+    { label: "Stan wykończenia", value: offer.condition || offer.finishCondition }
+  ].filter(p => p.value);
+
+  const buildingParams = [
+    { label: "Typ obiektu", value: offer.propertyType },
+    { label: "Rok budowy", value: offer.buildYear },
+    { label: "Ogrzewanie", value: offer.heating },
+    { label: "Umeblowane", value: offer.furnished },
+    { label: "Czynsz", value: offer.rent ? `${String(offer.rent).replace(/\D/g, '')} PLN` : null },
+    { label: "Dostępność", value: offer.availabilityDate ? new Date(offer.availabilityDate).toLocaleDateString('pl-PL') : null }
   ].filter(p => p.value);
 
   return (
@@ -299,13 +313,45 @@ function OfferDetails({ offer, currentUser }: { offer: any, currentUser: any }) 
           <div className="xl:w-1/3 flex flex-col relative mt-8 xl:mt-0">
             <div className="xl:sticky top-32 space-y-6 pt-2">
               
-              <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5">
-                {offerParams.map((param, idx) => (
-                  <div key={idx} className={`flex justify-between items-center ${idx !== offerParams.length - 1 ? 'border-b border-white/5 pb-5' : ''}`}>
-                    <span className="text-white/40 uppercase tracking-widest text-[10px] sm:text-xs font-bold">{param.label}</span>
-                    <span className="font-bold text-right text-sm sm:text-base max-w-[65%]">{param.value}</span>
+                            <div className="space-y-6">
+                {/* SEKCJA LOKALIZACJI */}
+                {locationParams.length > 0 && (
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5">
+                    <h4 className="text-[9px] uppercase tracking-widest text-emerald-500 font-black mb-1">Lokalizacja</h4>
+                    {locationParams.map((param, idx) => (
+                      <div key={idx} className={`flex justify-between items-center ${idx !== locationParams.length - 1 ? 'border-b border-white/5 pb-5' : ''}`}>
+                        <span className="text-white/40 uppercase tracking-widest text-[10px] sm:text-xs font-bold">{param.label}</span>
+                        <span className="font-bold text-right text-sm sm:text-base max-w-[65%]">{param.value}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* SEKCJA PARAMETRÓW GŁÓWNYCH */}
+                {mainParams.length > 0 && (
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5">
+                    <h4 className="text-[9px] uppercase tracking-widest text-emerald-500 font-black mb-1">Główne Parametry</h4>
+                    {mainParams.map((param, idx) => (
+                      <div key={idx} className={`flex justify-between items-center ${idx !== mainParams.length - 1 ? 'border-b border-white/5 pb-5' : ''}`}>
+                        <span className="text-white/40 uppercase tracking-widest text-[10px] sm:text-xs font-bold">{param.label}</span>
+                        <span className="font-bold text-right text-sm sm:text-base max-w-[65%]">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* SEKCJA BUDYNKU */}
+                {buildingParams.length > 0 && (
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5">
+                    <h4 className="text-[9px] uppercase tracking-widest text-emerald-500 font-black mb-1">Budynek & Koszty</h4>
+                    {buildingParams.map((param, idx) => (
+                      <div key={idx} className={`flex justify-between items-center ${idx !== buildingParams.length - 1 ? 'border-b border-white/5 pb-5' : ''}`}>
+                        <span className="text-white/40 uppercase tracking-widest text-[10px] sm:text-xs font-bold">{param.label}</span>
+                        <span className="font-bold text-right text-sm sm:text-base max-w-[65%]">{param.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <AnimatePresence>

@@ -10,7 +10,7 @@ export default function OfertyAdmin() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'archived'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending_approval' | 'active' | 'archived'>('pending_approval');
 
   const fetchOffers = async () => {
     try {
@@ -41,7 +41,7 @@ export default function OfertyAdmin() {
     const pastDate = new Date().toISOString(); 
     
     // Ponieważ w admin API nie ma punktu końcowego stricte do zmiany daty, 
-    // symulujemy zmianę na 'pending' (by zeszła z mapy) z natychmiastowym starym expiresAt.
+    // symulujemy zmianę na 'pending_approval' (by zeszła z mapy) z natychmiastowym starym expiresAt.
     // Z uwagi na to, że API /admin/offers (metoda PUT) akceptuje tylko 'status',
     // Musimy zbudować dedykowany mini-endpoint na żądanie... Ale zrobimy sprytniej!
     // Wysyłamy status 'archived_forced' i złapiemy to w starym API (zaktualizujemy je w locie).
@@ -71,7 +71,7 @@ export default function OfertyAdmin() {
     const isExpired = offer.status === 'archived' || (offer.expiresAt && new Date(offer.expiresAt).getTime() < Date.now());
     if (activeTab === 'archived') return isExpired;
     if (activeTab === 'active') return offer.status === 'active' && !isExpired;
-    if (activeTab === 'pending') return offer.status !== 'active' && !isExpired;
+    if (activeTab === 'pending_approval') return offer.status === 'pending_approval' && !isExpired;
     return true;
   });
 
@@ -86,8 +86,8 @@ export default function OfertyAdmin() {
       <div className="mb-10 w-full max-w-xl">
         <div className="flex bg-[#111] p-1.5 rounded-full border border-white/5 relative z-10">
           <button 
-            onClick={() => { setActiveTab('pending'); setSelectedOffer(null); }} 
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-full transition-colors duration-300 z-10 ${activeTab === 'pending' ? 'text-black' : 'text-white/40 hover:text-white'}`}
+            onClick={() => { setActiveTab('pending_approval'); setSelectedOffer(null); }} 
+            className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-full transition-colors duration-300 z-10 ${activeTab === 'pending_approval' ? 'text-black' : 'text-white/40 hover:text-white'}`}
           >
             Weryfikacja
           </button>
@@ -107,7 +107,7 @@ export default function OfertyAdmin() {
           {/* Płynna szklana pigułka (podświetlenie) */}
           <div 
             className={`absolute top-1.5 bottom-1.5 w-[calc(33.33%-4px)] rounded-full transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0 shadow-lg ${
-               activeTab === 'pending' ? 'left-1.5 bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 
+               activeTab === 'pending_approval' ? 'left-1.5 bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 
                activeTab === 'active' ? 'left-[calc(33.33%+1.5px)] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 
                'left-[calc(66.66%)] bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
             }`} 
@@ -155,7 +155,7 @@ export default function OfertyAdmin() {
               <div className="flex flex-col gap-3 mb-10">
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => handleUpdateStatus(selectedOffer.id, selectedOffer.status === 'active' ? 'pending' : 'active')} 
+                    onClick={() => handleUpdateStatus(selectedOffer.id, selectedOffer.status === 'active' ? 'pending_approval' : 'active')} 
                     className={`flex-1 py-5 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all border shadow-lg ${selectedOffer.status === 'active' ? 'border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10' : 'border-white/20 text-white hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-500/10'}`}
                   >
                     {selectedOffer.status === 'active' ? 'Cofnij Publikację' : 'Zatwierdź Ofertę'}

@@ -31,7 +31,7 @@ export default function AppointmentModal({ isOpen, onClose, offerId, sellerId }:
     finalDate.setHours(parseInt(hoursStr, 10), parseInt(minutesStr, 10), 0, 0);
     let buyerId = "nieznany";
     try {
-      const localUser = localStorage.getItem('luxestate_user') || localStorage.getItem('estateos_session');
+      const localUser = null;
       if (localUser) {
         const parsed = JSON.parse(localUser);
         buyerId = parsed.id || parsed.email || localUser;

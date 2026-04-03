@@ -18,6 +18,9 @@ export async function POST(req: Request) {
     let productDesc = 'Nielimitowane ogłoszenia, Import XML, Zlecenia Concierge i Radar Inwestorski.';
     let unitAmount = 414900;
     let metadata: any = { plan_type: plan || 'unknown' };
+    if (offerPayload) {
+      metadata.offer_payload = JSON.stringify(offerPayload);
+    }
 
     if (plan === 'investor') {
       productName = 'EstateOS Investor PRO';
@@ -35,41 +38,6 @@ export async function POST(req: Request) {
       productDesc = 'Wykupienie 1 slotu ogłoszeniowego ważnego przez równe 30 dni.';
       unitAmount = 2999; // 29.99 PLN
 
-      if (offerPayload && offerPayload.email) {
-        try {
-          const user = await prisma.user.findUnique({ where: { email: offerPayload.email } });
-          if (user) {
-             const draftOffer = await prisma.offer.create({
-               data: {
-                 userId: user.id,
-                 title: offerPayload.title,
-                 propertyType: offerPayload.propertyType || "Mieszkanie",
-                 district: offerPayload.district || "Śródmieście",
-                 price: String(offerPayload.price || '0'),
-                 area: String(offerPayload.area || '0'),
-                 description: offerPayload.description || "",
-                 address: offerPayload.address || "",
-                 imageUrl: offerPayload.imageUrl || "",
-                 images: offerPayload.images || "",
-                 contactName: offerPayload.contactName || "",
-                 contactPhone: offerPayload.contactPhone || "",
-                 status: "pending", // Zablokowane do momentu zapłaty!
-                 lat: parseFloat(offerPayload.lat) || 52.2297,
-                 lng: parseFloat(offerPayload.lng) || 21.0122,
-                 advertiserType: offerPayload.advertiserType || "private",
-                 rooms: String(offerPayload.rooms || ''),
-                 floor: String(offerPayload.floor || ''),
-                 year: String(offerPayload.buildYear || ''),
-                 amenities: offerPayload.amenities || "",
-                 floorPlan: offerPayload.floorPlan || null
-               }
-             });
-             metadata.pending_offer_id = String(draftOffer.id);
-          }
-        } catch (dbError) {
-          console.error("Błąd tworzenia szkicu ogłoszenia:", dbError);
-        }
-      }
     }
 
     const session = await stripe.checkout.sessions.create({

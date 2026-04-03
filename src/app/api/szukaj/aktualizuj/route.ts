@@ -32,8 +32,10 @@ export async function POST(req: Request) {
       where: { id: user.id },
       data: {
         searchType: body.type,
+        searchRooms: body.rooms ? Number(body.rooms) : null,
         searchDistricts: body.districts ? body.districts.join(',') : null,
         searchMaxPrice: body.maxPrice ? parseInt(String(body.maxPrice).replace(/\D/g, '')) : null,
+          searchTransactionType: body.transactionType || 'all',
         searchAreaFrom: body.areaFrom ? parseInt(String(body.areaFrom).replace(/\D/g, '')) : null,
         searchAreaTo: body.areaTo ? parseInt(String(body.areaTo).replace(/\D/g, '')) : null,
         searchPlotArea: body.plotArea ? parseInt(String(body.plotArea).replace(/\D/g, '')) : null,

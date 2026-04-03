@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     const offers = await prisma.offer.findMany({
-      where: { status: { in: ["active", "ACTIVE"] } },
+      where: { status: { in: ["active"] } },
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true, email: true, buyerType: true } } }
     });
@@ -28,6 +28,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let sellerEmail: string | null = null;
   try {
     const body = await req.json();
     const cookieStore = await cookies();
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
         const parsed = decryptSession(sessionCookie.value);
         dbUserId = parsed.id;
       } catch (e) {
-        const u = await prisma.user.findUnique({ where: { email: sessionCookie.value } });
+        // ZABETONOWANA LUKA: Nie ufamy danym z ciastka. Szukamy usera bezpiecznie.
+      const u = await prisma.user.findUnique({ where: { email: sessionCookie.value } });
         if (u) dbUserId = u.id;
       }
     }
@@ -81,10 +83,16 @@ export async function POST(req: Request) {
       const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
       try {
+        let hashedPassword = body.password;
+        if (body.password) {
+            const bcrypt = require('bcryptjs');
+            hashedPassword = await bcrypt.hash(body.password, 10);
+        }
+
         const newUser = await prisma.user.upsert({
           where: { email },
-          update: { isVerified: !isSmsEnabled, otpCode, otpExpiry, name: body.contactName, phone: finalPhone, password: body.password, buyerType: body.advertiserType || "private" },
-          create: { isVerified: !isSmsEnabled, otpCode, otpExpiry, email, password: body.password, role: "USER", name: body.contactName, phone: finalPhone, buyerType: body.advertiserType || "private" }
+          update: { isVerified: !isSmsEnabled, otpCode, otpExpiry, name: body.contactName, phone: finalPhone, password: hashedPassword, buyerType: body.advertiserType || "private" },
+          create: { isVerified: !isSmsEnabled, otpCode, otpExpiry, email, password: hashedPassword, role: "USER", name: body.contactName, phone: finalPhone, buyerType: body.advertiserType || "private" }
         });
         
         if (isSmsEnabled) {
@@ -116,7 +124,7 @@ export async function POST(req: Request) {
     // 🔥🔥🔥 STRAŻNIK LIMITÓW (GUARD CLAUSE) 🔥🔥🔥
     const userToCheck = await prisma.user.findUnique({
       where: { id: dbUserId },
-      select: { isPro: true, planType: true, extraListings: true, _count: { select: { offers: { where: { status: { in: ['active', 'pending', 'pending_approval', 'in_review'] } } } } } }
+      select: { isPro: true, planType: true, extraListings: true, _count: { select: { offers: { where: { status: { in: ['active', 'pending_approval'] } } } } } }
     });
 
     if (userToCheck) {
@@ -154,10 +162,17 @@ export async function POST(req: Request) {
           description: body.description || "", address: finalAddress, lat: Number(body.lat), lng: Number(body.lng),
           apartmentNumber: body.apartmentNumber || null, imageUrl: body.imageUrl, images: body.images,
           advertiserType: body.advertiserType || "private", agencyName: body.agencyName || null,
-          contactName: body.contactName, contactPhone: body.contactPhone, status: "pending", expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          contactName: body.contactName, contactPhone: body.contactPhone, status: "pending_approval", expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           rooms: body.rooms ? String(body.rooms) : null, floor: body.floor ? String(body.floor) : null,
           year: body.buildYear ? String(body.buildYear) : null, plotArea: body.plotArea ? String(body.plotArea) : null,
-          amenities: body.amenities || "", floorPlan: body.floorPlan || null
+          amenities: body.amenities || "", floorPlan: body.floorPlan || null,
+          transactionType: body.transactionType || "sale",
+          rentAdminFee: body.rentAdminFee || null,
+          deposit: body.deposit || null,
+          rentMinPeriod: body.rentMinPeriod || null,
+          rentAvailableFrom: body.rentAvailableFrom || null,
+          petsAllowed: Boolean(body.petsAllowed),
+          rentType: body.rentType || null
         }
       });
       
@@ -169,7 +184,7 @@ export async function POST(req: Request) {
           tls: { rejectUnauthorized: false }
         });
         
-        const sellerEmail = body.email || (await prisma.user.findUnique({ where: { id: dbUserId } }))?.email;
+        sellerEmail = body.email || (await prisma.user.findUnique({ where: { id: dbUserId } }))?.email;
 
         if (sellerEmail) {
           await transporter.sendMail({
@@ -181,7 +196,30 @@ export async function POST(req: Request) {
         }
       } catch (mailErr) {}
 
-      return NextResponse.json({ success: true, id: newOffer.id });
+      
+    // 🔥 AUTO-LOGIN PO PUBLIKACJI (Bezszwowe Doświadczenie) 🔥
+    try {
+        const cookieStore = await cookies();
+        const currentSession = cookieStore.get('estateos_session');
+        
+        // Jeśli nie ma ciastka, a mamy ID i E-mail, logujemy gościa w locie
+        if (!currentSession && dbUserId && sellerEmail) {
+            const sessionPayload = { id: dbUserId, email: sellerEmail, role: "USER" };
+            const token = encryptSession(sessionPayload);
+            
+            cookieStore.set('estateos_session', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 30 * 24 * 60 * 60, // 30 dni ważności
+                path: '/'
+            });
+        }
+    } catch (loginErr) {
+        console.error('Błąd autologowania w tle:', loginErr);
+    }
+
+    return NextResponse.json({ success: true, id: newOffer.id });
 
     } catch (e: any) {
       return NextResponse.json({ error: 'Błąd tworzenia oferty (Prisma)' }, { status: 500 });

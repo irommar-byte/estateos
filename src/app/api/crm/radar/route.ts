@@ -2,18 +2,31 @@ import { encryptSession, decryptSession } from '@/lib/sessionUtils';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    
     const cookieStore = await cookies();
+    const nextAuthSession = await getServerSession(authOptions);
     const sessionCookie = cookieStore.get('luxestate_user') || cookieStore.get('estateos_session');
-    if (!sessionCookie) return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
+    
+    let email = null;
+    if (nextAuthSession?.user?.email) {
+        email = nextAuthSession.user.email;
+    } else if (sessionCookie) {
+        try { 
+            let sessionData = decryptSession(sessionCookie.value); 
+            email = sessionData.email || sessionCookie.value;
+        } catch(e) {
+            email = sessionCookie.value;
+        }
+    }
 
-    let sessionData: any = {};
-    try { sessionData = decryptSession(sessionCookie.value); } catch(e) {}
-    const email = sessionData.email || sessionCookie.value;
+    if (!email) return NextResponse.json({ error: 'Brak autoryzacji' }, { status: 401 });
     
     // Pobieramy użytkownika wraz z jego statusem PRO
     const user = await prisma.user.findUnique({ 
@@ -44,8 +57,9 @@ export async function GET(req: Request) {
           const typeMatch = !buyer.searchType || buyer.searchType === "Wszystkie" || buyer.searchType === "Dowolny" || buyer.searchType === offer.propertyType;
           const distMatch = !buyer.searchDistricts || buyer.searchDistricts.includes("Wszystkie") || buyer.searchDistricts.includes(offer.district);
           const priceMatch = !buyer.searchMaxPrice || buyer.searchMaxPrice >= offerPrice;
+          const transactionMatch = !buyer.searchTransactionType || buyer.searchTransactionType === "all" || buyer.searchTransactionType === offer.transactionType;
           
-          return typeMatch && distMatch && priceMatch;
+          return typeMatch && distMatch && priceMatch && transactionMatch;
        });
 
        // 🔥 LOGIKA OPÓŹNIENIA 12H (RADAR FOMO) 🔥

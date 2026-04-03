@@ -28,23 +28,36 @@ export async function POST(req: Request) {
 
     const bid = await prisma.bid.create({
       data: {
-        offerId: String(offerId),
-        buyerId: String(dbUserId || currentUserEmail),
-        sellerId: String(offer.userId || currentUserEmail),
+        offerId: parseInt(offerId, 10),
+        buyerId: parseInt(String(dbUserId || currentUserEmail), 10),
+        sellerId: parseInt(String(offer.userId || currentUserEmail), 10),
         amount: Number(amount),
         financing: financing,
         status: 'PENDING'
       }
     });
+    
+    // --- INIEKCJA: Wiadomość Systemowa do Deal Roomu ---
+    try {
+        await prisma.dealMessage.create({
+            data: {
+                dealId: `${offerId}_${dbUserId}`,
+                senderId: 'SYSTEM',
+                senderName: 'EstateOS AI',
+                text: `💰 Złożono oficjalną ofertę zakupu na kwotę: ${Number(amount).toLocaleString('pl-PL')} PLN. Finansowanie: ${financing}`
+            }
+        });
+    } catch(e) { console.log('DealMessage err', e); }
+    
 
     // Powiadomienie dla Sprzedającego (Dzwoneczek)
     await prisma.notification.create({
       data: {
-        userId: String(offer.userId),
+        userId: Number(offer.userId),
         title: '💎 Nowa Oferta Zakupu!',
         message: `Kupiec złożył oficjalną ofertę w kwocie ${Number(amount).toLocaleString('pl-PL')} PLN (${financing === 'CASH' ? 'Gotówka' : 'Kredyt Bankowy'}) za Twoją nieruchomość. Wejdź w Lejek CRM.`,
         type: 'BID',
-        link: `/moje-konto/crm`
+        link: `/moje-konto/crm?tab=offers`
       }
     });
 

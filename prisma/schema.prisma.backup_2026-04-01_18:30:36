@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./luxestate.db"
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  role          String    @default("user")
+  email         String    @unique
+  password      String? // Opcjonalne! (Dla kont z Google/FaceID)
+  name          String?
+  phone         String?
+  image         String? // Avatar z Google
+  emailVerified DateTime? // Wymagane przez Auth.js
+
+  // Twoje oryginalne pola z systemu:
+  extraListings   Int       @default(0)
+  createdAt       DateTime  @default(now())
+  searchType      String?
+  searchTransactionType String? @default("all")
+  searchDistricts String?
+  searchMaxPrice  Int?
+  searchAreaTo    Int?
+  searchPlotArea  Int?
+  searchAmenities String?
+  financing       String?
+  buyerType       String    @default("private")
+  isVerified      Boolean   @default(false)
+  otpCode         String?
+  otpExpiry       DateTime?
+  isPro           Boolean   @default(false)
+  proExpiresAt    DateTime?
+  planType        PlanType  @default(NONE)
+  searchAreaFrom  Int?
+  searchRooms     Int?
+
+  // Relacje
+  offers        Offer[]
+  accounts      Account[]
+  sessions      Session[]
+  Authenticator Authenticator[]
+
+  @@index([email])
+}
+
+// --- NOWE TABELE DLA GOOGLE / APPLE / PASSKEYS ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Authenticator {
+  credentialID         String  @unique
+  userId               Int
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+// --- TWOJE ORYGINALNE TABELE POZOSTAJĄ BEZ ZMIAN ---
+
+enum PlanType {
+  NONE
+  INVESTOR
+  AGENCY
+}
+
+model Offer {
+  id              Int       @id @default(autoincrement())
+  expiresAt       DateTime?
+  apartmentNumber String?
+  title           String
+  propertyType    String    @default("Mieszkanie")
+  district        String    @default("Śródmieście")
+  price           String
+  area            String
+  description     String?
+  address         String?
+  imageUrl        String    @default("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop")
+  images          String?
+  status          String    @default("pending")
+  contactName     String?
+  contactPhone    String?
+  lat             Float     @default(52.2297)
+  lng             Float     @default(21.0122)
+  views           Int       @default(0)
+  userId          Int?
+  user            User?     @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  advertiserType  String    @default("private")
+  agencyName      String?
+  rooms           String?
+  floor           String?
+  heating         String?
+  year            String?
+  plotArea        String?
+  amenities       String?
+  floorPlan       String?
+
+  furnished String?
+
+  // --- NOWE POLA DLA WYNAJMU ---
+  transactionType   String  @default("sale") // "sale" (Sprzedaż) lub "rent" (Wynajem)
+  rentAdminFee      String? // Czynsz administracyjny (np. "800 PLN")
+  deposit           String? // Kaucja zwrotna (np. "4000 PLN")
+  rentMinPeriod     String? // Minimalny okres najmu (np. "12 miesięcy")
+  rentAvailableFrom String? // Dostępne od (np. "Zaraz", "01.07.2026")
+  petsAllowed       Boolean @default(false) // Akceptacja zwierząt
+  rentType          String? // Typ umowy (np. "Najem okazjonalny")
+  // -----------------------------
+
+
+  @@index([userId])
+  @@index([district])
+  @@index([status])
+}
+
+model Alert {
+  id           Int      @id @default(autoincrement())
+  email        String
+  propertyType String   @default("Wszystkie")
+  district     String   @default("Wszystkie")
+  maxPrice     Int
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+  @@index([district])
+}
+
+model SiteVisit {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  country   String   @default("PL")
+  path      String
+  createdAt DateTime @default(now())
+
+  @@index([ip])
+  @@index([path])
+}
+
+model Appointment {
+  id           String   @id @default(cuid())
+  offerId      Int
+  buyerId      Int
+  sellerId     Int
+  status       String   @default("PROPOSED")
+  proposedDate DateTime
+  message      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([offerId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  type      String   @default("INFO")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  reviewerId Int
+  targetId   Int
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([targetId])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  offerId   Int
+  buyerId   Int
+  sellerId  Int
+  amount    Int
+  financing String   @default("CASH")
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([offerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model LeadTransfer {
+  id              String   @id @default(cuid())
+  commissionRate  Float?
+  commissionTerms String?
+  offerId         Int
+  ownerId         Int
+  agencyId        Int
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+
+  @@index([offerId])
+  @@index([ownerId])
+}
+
+model DealMessage {
+  id             String   @id @default(cuid())
+  dealId         String
+  senderId       String
+  senderName     String?
+  text           String
+  attachmentUrl  String?
+  attachmentType String?
+  createdAt      DateTime @default(now())
+
+  @@index([dealId])
+}
+
+model CalendarNote {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  date      String // Format: YYYY-MM-DD
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}

@@ -45,7 +45,19 @@ export default function AdminUsers() {
     return offers.reduce((acc, off) => acc + (parseFloat(String(off.price).replace(/\s/g, '')) || 0), 0);
   };
 
+  const togglePro = async (id: number, isPro: boolean) => {
+    console.log("CLICK PRO:", id, isPro);
+    await fetch(`/api/admin/users/${id}/toggle-pro`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: isPro ? "take" : "give" })
+    });
+    fetchUsers();
+  };
+
   const handleUpdate = async (id: string, payload: any) => {
+
+
     const res = await fetch("/api/admin/users", {
       method: "PUT",
       body: JSON.stringify({ id, ...payload })
@@ -262,7 +274,7 @@ export default function AdminUsers() {
                    
                    <div className="flex gap-3">
                       <button 
-                        onClick={() => handleUpdate(selectedUser.id, { isPro: !selectedUser.isPro })}
+                        onClick={() => togglePro(selectedUser.id, selectedUser.isPro)}
                         className={`flex-1 py-3.5 rounded-xl border font-black text-[9px] uppercase tracking-widest transition-all ${selectedUser.isPro ? 'border-orange-500/30 text-orange-500 bg-orange-500/10 hover:bg-orange-500/20' : 'border-white/10 text-white/50 hover:bg-white/5'}`}
                       >
                         {selectedUser.isPro ? 'Zabierz PRO' : 'Daj Status PRO'}

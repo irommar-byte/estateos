@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         // Powiadomienie w systemie (Konwersja id na String dla tabeli Notification)
         await prisma.notification.create({
           data: {
-            userId: String(buyer.id),
+            userId: Number(buyer.id),
             title: "🔥 Gorąca Oferta z Radaru!",
             message: `Znaleźliśmy nieruchomość "${offer.title}", która pasuje do Twoich parametrów.`,
             type: "SYSTEM",

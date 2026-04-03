@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { encryptSession } from "@/lib/sessionUtils";
 
 const prisma = new PrismaClient();
 
@@ -39,17 +41,19 @@ export async function POST(req: Request) {
     const firstName = name ? name.split(' ')[0] : 'Inwestorze';
 
     // 2. INTELIGENTNY UPSERT (Zapisuje/Aktualizuje użytkownika)
+    const hashed = await bcrypt.hash(password, 10);
+
     await prisma.user.upsert({
       where: { email },
       update: { 
         isVerified: !isSmsEnabled, otpCode, otpExpiry, 
-        name, phone: finalPhone, password, 
+        name, phone: finalPhone, password: hashed, 
         searchType: type, searchDistricts: districts.join(','), 
         searchMaxPrice: parsedMaxPrice, buyerType, searchAmenities: amenities ? amenities.join(",") : null, searchAreaFrom: areaFrom ? parseInt(String(areaFrom), 10) : null, searchRooms: rooms ? parseInt(String(rooms), 10) : null 
       },
       create: { 
         isVerified: !isSmsEnabled, otpCode, otpExpiry, 
-        email, password, role: "USER", name, phone: finalPhone, 
+        email, password: hashed, role: "BUYER", name, phone: finalPhone, 
         searchType: type, searchDistricts: districts.join(','), 
         searchMaxPrice: parsedMaxPrice, buyerType, searchAmenities: amenities ? amenities.join(",") : null, searchAreaFrom: areaFrom ? parseInt(String(areaFrom), 10) : null, searchRooms: rooms ? parseInt(String(rooms), 10) : null 
       }
@@ -81,7 +85,24 @@ export async function POST(req: Request) {
     // 4. LOGOTYP ADAPTACYJNY DO MAILA
     const logoHtml = `<span style="color: #10b981; font-weight: bold;">E</span><span style="font-weight: bold;">state</span><span style="color: #10b981; font-weight: bold;">OS</span><sup style="font-weight: normal;">&trade;</sup>`;
 
-    return NextResponse.json({ success: true, requiresVerification: isSmsEnabled, email });
+    
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return NextResponse.json({ error: "User creation failed" }, { status: 500 });
+    }
+
+    const session = encryptSession({ id: user.id, email: user.email, role: user.role });
+
+    const res = NextResponse.json({ success: true, requiresVerification: isSmsEnabled, email });
+
+    res.cookies.set('estateos_session', session, {
+      httpOnly: true,
+      path: '/',
+    });
+
+    return res;
+  
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });

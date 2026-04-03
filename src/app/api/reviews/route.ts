@@ -19,8 +19,8 @@ export async function POST(req: Request) {
 
     const review = await prisma.review.create({
       data: {
-        reviewerId: String(reviewerId),
-        targetId: String(targetId),
+        reviewerId: Number(reviewerId),
+        targetId: Number(targetId),
         rating: Number(rating),
         comment
       }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // Powiadomienie o opinii
     await prisma.notification.create({
        data: {
-         userId: String(targetId),
+         userId: Number(targetId),
          title: `⭐ Otrzymałeś nową opinię: ${rating}/5`,
          message: comment ? `"${comment}"` : "Użytkownik ocenił współpracę pozytywnie.",
          type: "INFO"

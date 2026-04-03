@@ -22,7 +22,7 @@ export async function GET(req: Request, context: any) {
     });
 
     const reviews = await prisma.review.findMany({
-      where: { targetId: String(userId) },
+      where: { targetId: Number(userId) },
       orderBy: { createdAt: 'desc' }
     });
 

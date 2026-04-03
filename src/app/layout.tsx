@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Tracker from "@/components/Tracker";
+import { UserModeProvider } from "@/contexts/UserModeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,9 +21,11 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="pl">
       <body suppressHydrationWarning className={inter.className}>
-        <Tracker />
-        <Navbar />
-        {children}
+        <UserModeProvider>
+          <Tracker />
+          <Navbar />
+          {children}
+        </UserModeProvider>
       </body>
     </html>
   );

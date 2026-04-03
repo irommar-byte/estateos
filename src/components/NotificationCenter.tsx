@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Flame, CheckCircle, Star, X, Info, ChevronRight, ShieldAlert , Diamond } from "lucide-react";
+import { Bell, Flame, Briefcase, CheckCircle, Star, X, Info, ChevronRight, ShieldAlert , Diamond } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function NotificationCenter() {
@@ -50,18 +50,11 @@ export default function NotificationCenter() {
     
     // Inteligentny system routingu - sam wyciąga ID z treści, jeśli brakuje oficjalnego linku
     let finalLink = notif.link;
-    if (!finalLink && notif.title.includes('Nowa Oferta Zakupu')) {
-       // Szukamy frazy typu "dla oferty [ID]" lub po prostu "Oferta 123" w tekście/tytule
-       // Zakładamy, że jeśli mamy ID, to przenosimy do Dealroomu (Zarządzania Ofertą)
-       const match = notif.message.match(/dla oferty\s*#?\s*(\d+)/i) || notif.message.match(/ID:\s*(\d+)/i);
-       if (match && match[1]) {
-           finalLink = `/oferta/${match[1]}`;
-       } else if (notif.offerId) {
-           finalLink = `/oferta/${notif.offerId}`;
-       } else {
-           // Fallback - jeśli nie znajdzie ID, przenosi do panelu CRM by wejść w oferty ręcznie
-           finalLink = '/moje-konto/crm';
-       }
+    if (notif.link?.includes('/dealroom/') || notif.link?.includes('appId=')) {
+        finalLink = notif.link;
+    } else if (notif.title.includes('Nowa Oferta Zakupu') || notif.title.includes('💎')) {
+       // Sprytne przekierowanie dla starych i nowych ofert
+       finalLink = notif.link || '/moje-konto/crm';
     }
     
     if (finalLink) router.push(finalLink);
@@ -80,6 +73,7 @@ export default function NotificationCenter() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const getIconAndColor = (title: string, type: string) => {
+    if (title.includes('Deal Room') || title.includes('Wiadomość') || type === 'DEAL_UPDATE') return { icon: <Briefcase size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' };
     if (title.includes('Oferta Zakupu') || title.includes('💎')) return { icon: <Diamond size={16} />, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' };
     if (title.includes('Gorąca') || title.includes('VIP')) return { icon: <Flame size={16} />, color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/30' };
     if (title.includes('✅') || title.includes('Gratulacje')) return { icon: <CheckCircle size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' };
@@ -133,7 +127,7 @@ export default function NotificationCenter() {
                       >
                         {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>}
                         <div className="flex gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.bg} ${style.color} border ${style.border}`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.bg} ${style.color} border ${style.border} ${notif.type === 'DEAL_UPDATE' ? 'shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''}`}>
                             {style.icon}
                           </div>
                           <div className="flex-1">

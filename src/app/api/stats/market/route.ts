@@ -9,7 +9,7 @@ export async function GET() {
     const offers = await prisma.offer.findMany({
       where: { 
         propertyType: { in: ['Mieszkanie', 'mieszkanie', 'Apartament', 'apartament'] }, 
-        status: { in: ['active', 'ACTIVE'] },
+        status: { in: ['active'] },
         expiresAt: { gt: new Date() } // Gilotyna czasu (tylko ważne)
       },
       select: { price: true, area: true }

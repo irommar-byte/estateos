@@ -32,8 +32,8 @@ export async function GET() {
     const appointments = await prisma.appointment.findMany({
       where: {
         OR: [
-          { sellerId: { in: userIds } },
-          { buyerId: { in: userIds } }
+          { sellerId: { in: userIds.map(Number) } },
+          { buyerId: { in: userIds.map(Number) } }
         ]
       },
       orderBy: { proposedDate: 'asc' }

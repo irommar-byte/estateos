@@ -60,13 +60,13 @@ async function handlePingPong(req: Request) {
     else if (status === 'COMPLETED') {
       notifTitle = 'Prezentacja Zakończona'; notifMsg = 'Druga strona potwierdziła spotkanie.';
       if (body.rating && targetUserId) {
-        await prisma.review.create({ data: { reviewerId: String(dbUserId), targetId: String(targetUserId), rating: Number(body.rating), comment: body.reviewComment || '' } });
+        await prisma.review.create({ data: { reviewerId: Number(dbUserId), targetId: Number(targetUserId), rating: Number(body.rating), comment: body.reviewComment || '' } });
       }
     }
 
     if (notifTitle && targetUserId) {
       await prisma.notification.create({
-        data: { userId: String(targetUserId), title: notifTitle, message: notifMsg, type: 'APPOINTMENT', link: `/moje-konto/crm?appId=${updatedAppt.id}` }
+        data: { userId: Number(targetUserId), title: notifTitle, message: notifMsg, type: 'APPOINTMENT', link: `/moje-konto/crm?appId=${updatedAppt.id}` }
       });
     }
 

@@ -33,34 +33,63 @@ const PROPERTY_TYPES = [
 const AMENITIES = ["Balkon", "Garaż/Miejsce park.", "Piwnica/Pom. gosp.", "Ogródek", "Dwupoziomowe", "Winda", "Klimatyzacja"];
 const HEATING_TYPES = ["Miejskie", "Gazowe", "Elektryczne", "Pompa Ciepła", "Węglowe/Pellet", "Inne"];
 
-const SortableItem = ({ id, img, idx, onRemove }: any) => {
+const SortableItem = ({ id, img, idx, onRemove, progressObj }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
-    transition, 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
     zIndex: isDragging ? 999 : 1,
     opacity: isDragging ? 0.9 : 1,
     scale: isDragging ? '1.05' : '1',
     boxShadow: isDragging ? '0 20px 40px rgba(16,185,129,0.5)' : ''
   };
+
+  const isUploading = progressObj && progressObj.progress < 100 && !progressObj.error;
+  const isError = progressObj && progressObj.error;
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-32 h-32 relative rounded-2xl overflow-hidden group border border-white/10 hover:border-[#10b981]/50 transition-all z-50 shadow-lg cursor-grab active:cursor-grabbing">
-      <img src={img} className="w-full h-full object-cover pointer-events-none" alt="Miniatura" />
-      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+    <div ref={setNodeRef} style={style} className="w-32 h-32 relative rounded-2xl overflow-hidden group border border-white/10 hover:border-[#10b981]/50 transition-all z-50 shadow-lg bg-black/40 flex-shrink-0">
+      <img src={img} className={`w-full h-full object-cover pointer-events-none transition-all ${isUploading ? 'opacity-40 blur-[2px]' : ''}`} alt="Miniatura" />
+
+      {/* Nakładka z kropeczkami (Uchwyt Drag & Drop) */}
+      <div {...attributes} {...listeners} className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-20">
+        <div className="bg-black/60 px-3 py-2 rounded-full backdrop-blur-md border border-white/10 shadow-xl flex gap-1 items-center">
+           <div className="w-1.5 h-1.5 bg-white/70 rounded-full"></div>
+           <div className="w-1.5 h-1.5 bg-white/70 rounded-full"></div>
+           <div className="w-1.5 h-1.5 bg-white/70 rounded-full"></div>
+        </div>
+      </div>
+
       <button onPointerDown={(e) => { e.stopPropagation(); onRemove(idx); }} className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all z-[60] shadow-lg backdrop-blur-sm">
-        <Trash2 size={14}/> 
+        <Trash2 size={14}/>
       </button>
-      {idx === 0 && <span className="absolute bottom-0 left-0 w-full bg-[#10b981] backdrop-blur-md text-black text-[9px] font-black uppercase tracking-widest text-center py-1 z-10 shadow-[0_-5px_15px_rgba(16,185,129,0.3)]">Główne</span>}
+
+      {idx === 0 && !isUploading && !isError && <span className="absolute bottom-0 left-0 w-full bg-[#10b981] backdrop-blur-md text-black text-[9px] font-black uppercase tracking-widest text-center py-1 z-10 shadow-[0_-5px_15px_rgba(16,185,129,0.3)] pointer-events-none">Główne</span>}
+
+      {/* Pasek postępu */}
+      {isUploading && (
+        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/50 overflow-hidden z-30">
+          <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-200 ease-out" style={{ width: `${progressObj.progress}%` }} />
+        </div>
+      )}
+
+      {/* Błąd */}
+      {isError && (
+         <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 backdrop-blur-sm z-30 pointer-events-none">
+            <span className="text-[9px] font-black text-white uppercase bg-red-500 px-2 py-1 rounded-md">Błąd</span>
+         </div>
+      )}
     </div>
   );
 };
 
 export default function ClientForm({ initialUser }: { initialUser?: any }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const [data, setData] = useState<any>({ 
+  const [data, setData] = useState<any>({
+    transactionType: 'sale', rentAdminFee: '', deposit: '', rentMinPeriod: '', rentAvailableFrom: '', petsAllowed: false, rentType: '',
     propertyType: '', title: '', 
     locationType: 'exact', address: '', lng: null, lat: null, district: '', apartmentNumber: '', 
-    price: '', area: '', rooms: '', floor: '', buildYear: '', plotArea: '', heating: '', 
+    price: '', area: '', rooms: '', floor: '', buildYear: '', plotArea: '', heating: '', furnished: '', rent: '', 
     amenities: [], description: '', 
     advertiserType: 'private', agencyName: '',
     contactName: initialUser?.name || '', contactPhone: initialUser?.phone || '', email: initialUser?.email || '', password: '' 
@@ -70,6 +99,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
   const [addressError, setAddressError] = useState('');
   
   const [imagesList, setImagesList] = useState<string[]>([]);
+  const [uploadStats, setUploadStats] = useState<{[key: string]: {progress: number, error: boolean, sizeMB: number}}>({});
   const [filesMap, setFilesMap] = useState<{[key: string]: File}>({}); 
   const [totalSizeMB, setTotalSizeMB] = useState(0);
   const [floorPlan, setFloorPlan] = useState<string | null>(null);
@@ -90,6 +120,42 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   const updateData = (newData: any) => setData({ ...data, ...newData });
+
+  const [isProcessingPlus, setIsProcessingPlus] = useState(false);
+  const handlePlusPayment = async () => {
+    setIsProcessingPlus(true);
+    try {
+      const cleanPrice = String(data.price || '').replace(/\D/g, "");
+      const finalDesc = editorRef.current?.innerHTML || data.description;
+      const payloadImages = imagesList.length > 0 ? JSON.stringify(imagesList) : null;
+      const payloadImageUrl = imagesList[0] || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop";
+      
+      const offerPayload = { 
+        ...data, 
+        price: cleanPrice,
+        description: finalDesc,
+        images: payloadImages, 
+        imageUrl: payloadImageUrl,
+        amenities: Array.isArray(data.amenities) ? data.amenities.join(", ") : data.amenities
+      };
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'pakiet_plus', offerPayload })
+      });
+      const resData = await res.json();
+      if (resData.url) {
+        window.location.href = resData.url;
+      } else {
+        alert(resData.error || "Wystąpił problem z generowaniem płatności.");
+      }
+    } catch (e) {
+      alert("Błąd połączenia z kasą.");
+    } finally {
+      setIsProcessingPlus(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -225,46 +291,101 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
 
   // --- Zarządzanie Zdjeciami (Limit 30MB) ---
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      let newSize = totalSizeMB;
-      const validFiles = files.filter(f => {
-        const sizeMB = f.size / (1024 * 1024);
-        if (newSize + sizeMB > 30) return false;
-        newSize += sizeMB;
-        return true;
-      });
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
 
-      if (validFiles.length < files.length) {
-        alert("Przekroczono limit 30 MB. Część zdjęć nie została dodana.");
-      }
+  const newFiles = Array.from(files);
+  let currentSizeMB = totalSizeMB;
+  const allowedFiles = [];
 
-      setTotalSizeMB(newSize);
-      const newMap = { ...filesMap };
-      const newImages = validFiles.map(f => {
-        const url = URL.createObjectURL(f);
-        newMap[url] = f;
-        return url;
-      });
-      setFilesMap(newMap);
-      setImagesList(prev => [...prev, ...newImages]);
+  for (const f of newFiles) {
+    const fSizeMB = f.size / (1024 * 1024);
+    if (currentSizeMB + fSizeMB <= 30) {
+      allowedFiles.push(f);
+      currentSizeMB += fSizeMB;
+    } else {
+      alert(`Pominięto plik ${f.name} - przekroczono limit 30 MB.`);
     }
-  };
+  }
 
-  const handleFloorPlanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFloorPlanFile(e.target.files[0]);
-      setFloorPlan(URL.createObjectURL(e.target.files[0]));
+  setTotalSizeMB(currentSizeMB);
+
+  allowedFiles.forEach(file => {
+    const localId = URL.createObjectURL(file);
+    const fSizeMB = file.size / (1024 * 1024);
+    
+    // 1. Natychmiastowy Podgląd
+    setImagesList(prev => [...prev, localId]);
+    setUploadStats(prev => ({ ...prev, [localId]: { progress: 0, error: false, sizeMB: fSizeMB } }));
+
+    // 2. Asynchroniczna wysyłka pliku (XHR pozwala na śledzenie Paska Postępu)
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+    
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setUploadStats(prev => ({ ...prev, [localId]: { progress: percent, error: false, sizeMB: prev[localId]?.sizeMB || fSizeMB } }));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const d = JSON.parse(xhr.responseText);
+          const serverUrl = d.url || d.fileUrl || (d.images && d.images[0]);
+          if (serverUrl) {
+            // Zamieniamy miniaturkę na realny adres serwerowy, bez przeskoku UI
+            setImagesList(prev => prev.map(id => id === localId ? serverUrl : id));
+            setUploadStats(prev => {
+               const next = { ...prev, [serverUrl]: { progress: 100, error: false, sizeMB: prev[localId]?.sizeMB || fSizeMB } };
+               return next;
+            });
+          } else {
+             setUploadStats(prev => ({ ...prev, [localId]: { progress: 0, error: true, sizeMB: fSizeMB } }));
+          }
+        } catch(err) {
+          setUploadStats(prev => ({ ...prev, [localId]: { progress: 0, error: true, sizeMB: fSizeMB } }));
+        }
+      } else {
+         setUploadStats(prev => ({ ...prev, [localId]: { progress: 0, error: true, sizeMB: fSizeMB } }));
+      }
+    };
+    
+    xhr.onerror = () => setUploadStats(prev => ({ ...prev, [localId]: { progress: 0, error: true, sizeMB: fSizeMB } }));
+
+    const formData = new FormData();
+    formData.append('file', file);
+    xhr.send(formData);
+  });
+  
+  e.target.value = '';
+};
+
+  const handleFloorPlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const formData = new FormData();
+    formData.append("files", files[0]);
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const d = await res.json();
+        setFloorPlan(d.images[0]);
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
-    const url = imagesList[indexToRemove];
-    if (filesMap[url]) {
-      setTotalSizeMB(prev => Math.max(0, prev - (filesMap[url].size / (1024 * 1024))));
-    }
-    setImagesList(prev => prev.filter((_, i) => i !== indexToRemove));
-  };
+  const url = imagesList[indexToRemove];
+  const sizeToSubtract = uploadStats[url]?.sizeMB || filesMap[url]?.size / (1024 * 1024) || 0;
+  setTotalSizeMB(prev => Math.max(0, prev - sizeToSubtract));
+  setImagesList(prev => prev.filter((_, i) => i !== indexToRemove));
+};
 
   // --- Luksusowy Asystent AI (Nowy Model) ---
   const handleGenerateAI = () => {
@@ -297,6 +418,35 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
 
   // --- Submit Logic ---
   const handleSubmit = async () => {
+
+    // --- TWARDA LOGIKA BIZNESOWA ESTATEOS ---
+    if (data?.advertiserType === 'agency') {
+        const isAgency = initialUser?.role === 'AGENCY' || initialUser?.role === 'ADMIN';
+        if (!isAgency) {
+            // Zatrzymujemy wysyłkę, chowamy ewentualny spinner
+            setIsSubmitting(false);
+            
+            // Zapisujemy wpisane dane w przeglądarce, żeby klient ich nie stracił!
+            try { localStorage.setItem('estateos_saved_offer', JSON.stringify(data)); } catch(e) {}
+            
+            alert("Funkcja Premium: Aby wystawiać ogłoszenia jako Agencja/Biuro i uzyskać dostęp do bazy Kupujących (Radar Pro), musisz wykupić pakiet Agencja PRO.");
+            
+            // Przekierowanie prosto do bramki płatności Stripe
+            fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: 'agency', returnUrl: window.location.origin + '/dodaj-oferte' })
+            }).then(res => res.json()).then(d => {
+                if (d.url) window.location.href = d.url;
+            }).catch(() => alert("Błąd połączenia z bramką płatności."));
+            return; // BLOKADA DALSZEJ REJESTRACJI I WYSYŁKI!
+        }
+    }
+    
+    // Ustawiamy odpowiednią rolę do wysłania na backend
+    data.registerRole = data?.advertiserType === 'agency' ? 'AGENCY' : 'SELLER';
+    // ----------------------------------------
+
     if (initialUser?.limitReached) { setActionModal("limit"); return; }
     setIsSubmitting(true);
     try {
@@ -406,6 +556,22 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
           </h1>
         </div>
 
+        {/* NOWY PRZEŁĄCZNIK KUPNO / WYNAJEM */}
+        <div className="flex justify-center mb-12">
+          <div className="bg-[#111] border border-white/10 rounded-full p-1.5 flex shadow-inner relative w-full max-w-[400px]">
+             <div className={`absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] bg-[#0a0a0a] border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] rounded-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${data.transactionType === 'rent' ? 'translate-x-[calc(100%+12px)]' : 'translate-x-0'}`}></div>
+             
+             <button type="button" onClick={() => updateData({ transactionType: 'sale' })} className={`relative z-10 flex-1 py-3.5 text-[10px] md:text-xs font-black uppercase tracking-widest transition-colors duration-500 text-center ${data.transactionType === 'sale' ? 'text-emerald-400' : 'text-white/40 hover:text-white/80'}`}>
+               Sprzedaż
+             </button>
+             
+             <button type="button" onClick={() => updateData({ transactionType: 'rent' })} className={`relative z-10 flex-1 py-3.5 text-[10px] md:text-xs font-black uppercase tracking-widest transition-colors duration-500 text-center ${data.transactionType === 'rent' ? 'text-emerald-400' : 'text-white/40 hover:text-white/80'}`}>
+               Wynajem
+             </button>
+          </div>
+        </div>
+
+
         <div className="space-y-8">
             
             {/* KROK 1: TOŻSAMOŚĆ I RODZAJ */}
@@ -511,7 +677,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
-                  <label className={labelPremium}>Cena (PLN) *</label>
+                  <label className={labelPremium}>{data.transactionType === 'rent' ? 'Czynsz najmu (miesięcznie) *' : 'Cena (PLN) *'}</label>
                   <input type="text" className={inputPremium} placeholder="850 000" value={data.price || ''} 
                     onChange={(e) => updateData({ price: e.target.value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, " ") })} />
                 </div>
@@ -523,37 +689,32 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
                 
                 {data.propertyType !== 'Działka' && (
                   <>
-                    <div>
-                      <label className={labelPremium}>Liczba Pokoi</label>
-                      <input type="text" className={inputPremium} placeholder="3" value={data.rooms || ''} 
-                        onChange={(e) => updateData({ rooms: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
+                    <div className={requiresPlot ? 'lg:col-span-2' : ''}>
+                      <label className={labelPremium}>Rodzaj Ogrzewania</label>
+                      <select className={`${inputPremium} appearance-none cursor-pointer`} value={data.heating || ''} onChange={(e) => updateData({ heating: e.target.value })}>
+                        <option value="">Wybierz...</option>
+                        {HEATING_TYPES.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
                     </div>
-                    {data.propertyType === 'Mieszkanie' && (
-                      <div>
-                        <label className={labelPremium}>Piętro</label>
-                        <input type="text" className={inputPremium} placeholder="Np. 2 lub Parter" value={data.floor || ''} 
-                          onChange={(e) => updateData({ floor: e.target.value })} />
+
+                    {/* Luksusowe przyciski Umeblowania */}
+                    <div>
+                      <label className={labelPremium}>Umeblowane</label>
+                      <div className="flex gap-4">
+                        <button type="button" onClick={(e) => { e.preventDefault(); updateData({ furnished: 'Tak' }); }} className={`flex-1 py-4 rounded-xl border-2 font-black uppercase tracking-widest text-[10px] transition-all ${data.furnished === 'Tak' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-[#111] border-white/5 text-white/40 hover:border-white/20 hover:bg-white/5'}`}>Tak</button>
+                        <button type="button" onClick={(e) => { e.preventDefault(); updateData({ furnished: 'Nie' }); }} className={`flex-1 py-4 rounded-xl border-2 font-black uppercase tracking-widest text-[10px] transition-all ${data.furnished === 'Nie' ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-[#111] border-white/5 text-white/40 hover:border-white/20 hover:bg-white/5'}`}>Nie</button>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Pole Czynszu */}
+                    <div>
+                      <label className={labelPremium}>Czynsz administracyjny <span className="text-white/30 font-normal ml-1 text-[10px]">(Opcjonalnie)</span></label>
+                      <div className="relative group">
+                        <input type="text" placeholder="Np. 1500" className={`${inputPremium} pr-12`} value={data.rent || ''} onChange={(e) => updateData({ rent: e.target.value.replace(/[^0-9]/g, '') })} />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 text-[10px] font-black tracking-widest uppercase">PLN</div>
+                      </div>
+                    </div>
                   </>
-                )}
-                
-                {requiresPlot && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-2">
-                    <label className={labelPremium}>Powierzchnia Działki (m²) *</label>
-                    <input type="text" className={inputPremium} placeholder="Np. 1200" value={data.plotArea || ''} 
-                      onChange={(e) => updateData({ plotArea: e.target.value.replace(/\D/g, "") })} />
-                  </motion.div>
-                )}
-                
-                {data.propertyType !== 'Działka' && (
-                  <div className={requiresPlot ? 'lg:col-span-2' : ''}>
-                    <label className={labelPremium}>Rodzaj Ogrzewania</label>
-                    <select className={`${inputPremium} appearance-none cursor-pointer`} value={data.heating || ''} onChange={(e) => updateData({ heating: e.target.value })}>
-                      <option value="">Wybierz...</option>
-                      {HEATING_TYPES.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                  </div>
                 )}
                 
                 {/* AI Monitor Przelicznik */}
@@ -604,7 +765,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
                   
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => { const { active, over } = e; if (active.id !== over?.id && over) { setImagesList((items) => arrayMove(items, items.indexOf(active.id as string), items.indexOf(over.id as string))); } }}>
                     <SortableContext items={imagesList} strategy={rectSortingStrategy}>
-                      {imagesList.map((img, idx) => <SortableItem key={img} id={img} img={img} idx={idx} onRemove={handleRemoveImage} />)}
+                      {imagesList.map((img, idx) => <SortableItem key={img} id={img} img={img} idx={idx} onRemove={handleRemoveImage} progressObj={uploadStats[img]} />)}
                     </SortableContext>
                   </DndContext>
                 </div>
@@ -658,7 +819,49 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
                     )}
                   </div>
 
-                  <div>
+                  
+                  {/* --- NOWA SEKCJA: WARUNKI NAJMU --- */}
+                  <AnimatePresence>
+                    {data.transactionType === 'rent' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }} 
+                        animate={{ opacity: 1, height: 'auto' }} 
+                        exit={{ opacity: 0, height: 0 }}
+                        className="col-span-full overflow-hidden mb-4"
+                      >
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-[2rem] p-6 md:p-8 shadow-[0_0_30px_rgba(16,185,129,0.05)]">
+                          <h3 className="text-emerald-400 font-black text-[11px] uppercase tracking-[0.2em] mb-5 flex items-center gap-2">
+                            <Key size={14} /> Szczegóły Wynajmu
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className={labelPremium}>Typ umowy / Dostępność</label>
+                              <input 
+                                type="text" 
+                                className={inputPremium} 
+                                placeholder="np. Najem okazjonalny, od 01.07" 
+                                value={data.rentType || ''} 
+                                onChange={(e) => updateData({ rentType: e.target.value })} 
+                              />
+                            </div>
+                            <div className="flex flex-col justify-end">
+                              <label className={labelPremium}>Zwierzęta</label>
+                              <button
+                                type="button"
+                                onClick={() => updateData({ petsAllowed: !data.petsAllowed })}
+                                className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl border transition-all duration-300 ${data.petsAllowed ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+                              >
+                                <span className="font-bold uppercase tracking-widest text-[10px]">Akceptuję zwierzęta</span>
+                                {data.petsAllowed ? <CheckCircle size={20} /> : <div className="w-5 h-5 rounded-full border-2 border-white/10" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+              <div>
                     <label className={labelPremium}>Udogodnienia (Premium)</label>
                     <div className="flex flex-wrap gap-2">
                       {AMENITIES.map(item => {
@@ -788,8 +991,8 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
                   <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Osiągnięto Limit</h2>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 mb-6 animate-pulse">⚡ Oferta Limitowana</div>
                   <p className="text-zinc-400 mb-8 leading-relaxed font-medium">Odblokuj to ogłoszenie w specjalnej cenie: <br/><span className="text-zinc-600 line-through text-lg mr-2 decoration-red-500/40">49,99 zł</span><span className="text-white font-black text-3xl">29,99 zł</span></p>
-                  <button onClick={() => { window.location.href = data.email ? `https://buy.stripe.com/6oEbL7eRk30V15S5km?prefilled_email=${encodeURIComponent(data.email)}` : "https://buy.stripe.com/6oEbL7eRk30V15S5km"; }} className="w-full py-5 bg-blue-600 text-white font-black uppercase tracking-[0.2em] rounded-[1.5rem] transition-all duration-300 hover:bg-blue-500 hover:brightness-125 shadow-xl flex flex-col items-center justify-center">
-                    <span>ODBLOKUJ I OPUBLIKUJ</span><span className="text-[9px] opacity-70 mt-1 font-bold">AUTOPUBLIKACJA PO PŁATNOŚCI</span>
+                  <button onClick={handlePlusPayment} disabled={isProcessingPlus} className="w-full py-5 bg-blue-600 text-white font-black uppercase tracking-[0.2em] rounded-[1.5rem] transition-all duration-300 hover:bg-blue-500 hover:brightness-125 shadow-xl flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isProcessingPlus ? <span>ŁADOWANIE KASY...</span> : <><span>ODBLOKUJ I OPUBLIKUJ</span><span className="text-[9px] opacity-70 mt-1 font-bold">AUTOPUBLIKACJA PO PŁATNOŚCI</span></>}
                   </button>
                   <button onClick={() => setActionModal("none")} className="mt-6 text-[10px] text-zinc-500 uppercase tracking-widest font-bold hover:text-white transition-colors">Wróć do edycji</button>
                 </>
