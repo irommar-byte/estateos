@@ -6,3 +6,5 @@ node_modules
 *.backup
 *.bak
 *.sqlite
+public/uploads
+public/uploads/
