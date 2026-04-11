@@ -456,7 +456,7 @@ export default function ProWidget({ currentUser, isBooting = false }: { currentU
       {/* POPUP NOTATKI */}
       <AnimatePresence>
         {selectedDate && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-xl flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
              <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="bg-[#0a0a0a] border border-[#222] p-6 md:p-8 rounded-[2rem] w-full max-w-md shadow-[0_50px_100px_rgba(0,0,0,1),inset_0_2px_10px_rgba(255,255,255,0.02)]">
                 <div className="flex justify-between items-center mb-6">
                    <div className="flex items-center gap-3">
@@ -482,7 +482,7 @@ export default function ProWidget({ currentUser, isBooting = false }: { currentU
           </motion.div>
         )}
       {showProModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-xl flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
              <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="bg-[#0a0a0a] border border-emerald-500/30 p-8 md:p-10 rounded-[2rem] w-full max-w-lg shadow-[0_0_100px_rgba(16,185,129,0.1),inset_0_2px_20px_rgba(255,255,255,0.02)] text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600"></div>
                 <button onClick={() => setShowProModal(false)} className="absolute top-6 right-6 p-2 bg-black hover:bg-white/10 rounded-full text-white/50 transition-colors border border-white/5"><X size={16}/></button>

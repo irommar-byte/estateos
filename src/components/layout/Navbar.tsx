@@ -55,9 +55,16 @@ export default function Navbar() {
         </div>
         
         {/* Małe Logo dla Mobajla, by zrobic miejsce na przełącznik */}
-        <div onClick={() => router.push('/')} className="cursor-pointer group flex-shrink-0 relative z-20 sm:hidden">
+        <div onClick={() => router.push('/')} className="cursor-pointer group flex-shrink-0 relative z-20 sm:hidden hidden">
           <span className="text-lg font-black tracking-tighter text-emerald-500 uppercase italic">
             E<span className="text-white">OS</span>
+          </span>
+        </div>
+
+        {/* MOBILE LOGO CENTERED */}
+        <div className="sm:hidden absolute left-1/2 -translate-x-1/2 top-1 z-[101]">
+          <span className="text-lg font-black tracking-tighter uppercase italic text-white relative overflow-hidden shimmer-logo">
+            <span className="text-[#10b981]">E</span>state<span className="text-[#10b981]">OS</span>&trade;
           </span>
         </div>
 
@@ -69,11 +76,7 @@ export default function Navbar() {
         {/* DESKTOP NAV */}
         <div className="hidden lg:flex items-center justify-end flex-1 ml-10">
             <div className="flex items-center gap-5">
-               <button onClick={() => handleNavClick('/cennik')} className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:text-[#FFF0AA] transition-colors flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]">
-                  <Crown size={14} className="mb-[1px]"/> Cennik PRO
-               </button>
-               <div className="h-4 w-[1px] bg-white/10 mx-1" />
-               <NotificationCenter />
+               {user && <NotificationCenter />}
                
                {user ? (
                  <div className="flex items-center gap-4 ml-1">
@@ -92,7 +95,7 @@ export default function Navbar() {
 
         {/* WYZWALACZ MOBILNY */}
         <div className="flex items-center gap-2 lg:hidden relative z-20">
-          <NotificationCenter />
+          {user && <NotificationCenter />}
           <button onClick={() => setIsOpen(!isOpen)} className="text-white p-2 hover:text-emerald-500 transition-colors">
              {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -107,7 +110,7 @@ export default function Navbar() {
               <div className="space-y-6 px-2 mt-4">
                 <button onClick={() => handleNavClick('/', true)} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all w-full text-left"><Home size={18} className="text-gray-600"/> Odkryj Mapę</button>
                 <button onClick={() => handleNavClick('/oferty')} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all w-full text-left"><Building2 size={18} className="text-gray-600"/> Rynek Nieruchomości</button>
-                <button onClick={() => handleNavClick('/cennik')} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-[#D4AF37] hover:text-[#FFF0AA] w-full text-left"><Crown size={18}/> Cennik PRO</button>
+                <button onClick={() => handleNavClick('/cennik')} className="flex items-center gap-4 text-sm font-black uppercase tracking-widest text-[#D4AF37] hover:text-[#FFF0AA] w-full text-left"><Crown size={18}/> EstateOS™ Elite</button>
               </div>
               <div className="h-[1px] bg-white/5" />
               <div className="space-y-6 px-2">
@@ -125,6 +128,26 @@ export default function Navbar() {
         )}
       </AnimatePresence>
       <ReviewPrompt />
+<style jsx>{`
+.shimmer-logo::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35), transparent 70%);
+  transform: skewX(-20deg);
+  animation: shimmerMove 15s infinite;
+}
+@keyframes shimmerMove {
+  0% { left: -150%; opacity: 0; }
+  5% { opacity: 1; }
+  10% { left: 150%; opacity: 0; }
+  100% { left: 150%; opacity: 0; }
+}
+`}</style>
+
     </nav>
   );
 }

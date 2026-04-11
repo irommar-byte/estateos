@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { useRouter } from "next/navigation";
 
 type UserMode = "BUYER" | "SELLER" | "AGENCY";
 
@@ -10,28 +9,36 @@ interface UserModeContextType {
   selectMode: (newMode: UserMode, currentUser?: any) => void;
   forceMode: (newMode: UserMode) => void;
   initModeFromUser: (currentUser: any) => void;
+  isUpgradeModalOpen: boolean;
+  setIsUpgradeModalOpen: (v: boolean) => void;
+  upgradeModalType: "PRO" | "AGENCY" | null;
 }
 
 const UserModeContext = createContext<UserModeContextType | undefined>(undefined);
 
 export function UserModeProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
 
   const [mode, setMode] = useState<UserMode>(() =>
-    (typeof window !== "undefined" && (localStorage.getItem("estateos_user_mode") as UserMode)) || "BUYER"
+    (typeof window !== "undefined" &&
+      (localStorage.getItem("estateos_user_mode") as UserMode)) || "BUYER"
   );
+
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeModalType, setUpgradeModalType] = useState<"PRO" | "AGENCY" | null>(null);
 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [targetMode, setTargetMode] = useState<UserMode | null>(null);
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [upgradeModalType, setUpgradeModalType] = useState<"PRO" | "AGENCY">("PRO");
 
   const initModeFromUser = (currentUser: any) => {
     if (!currentUser) return;
-    const saved = localStorage.getItem("estateos_user_mode") as UserMode;
-    if (saved) return;
 
-    const actualRole = currentUser.role === "SELLER" ? "SELLER" : (currentUser.role === "AGENCY" ? "AGENCY" : "BUYER");
+    const actualRole =
+      currentUser.accountType === "SELLER"
+        ? "SELLER"
+        : currentUser.planType === "AGENCY"
+        ? "AGENCY"
+        : "BUYER";
+
     setMode(actualRole);
     localStorage.setItem("estateos_user_mode", actualRole);
   };
@@ -39,27 +46,15 @@ export function UserModeProvider({ children }: { children: ReactNode }) {
   const forceMode = (newMode: UserMode) => {
     setMode(newMode);
     localStorage.setItem("estateos_user_mode", newMode);
+    window.location.reload();
   };
 
   const selectMode = (newMode: UserMode, currentUser?: any) => {
     if (!currentUser) return;
 
-    const isPro = currentUser.isPro === true || String(currentUser.isPro) === "true";
-    const isAgencyOrAdmin = currentUser.role === "ADMIN" || currentUser.role === "AGENCY";
-
-    if (newMode === "AGENCY" && !isAgencyOrAdmin) {
-      setUpgradeModalType("AGENCY");
-      setIsUpgradeModalOpen(true);
+    // 🔥 AGENCY tylko dla planu AGENCY
+    if (newMode === "AGENCY" && currentUser.planType !== "AGENCY") {
       return;
-    }
-
-    if ((mode === "BUYER" && newMode === "SELLER") ||
-        (mode === "SELLER" && newMode === "BUYER")) {
-      if (!isPro && !isAgencyOrAdmin) {
-        setUpgradeModalType("PRO");
-        setIsUpgradeModalOpen(true);
-        return;
-      }
     }
 
     if (isTransitioning || mode === newMode) return;
@@ -70,6 +65,9 @@ export function UserModeProvider({ children }: { children: ReactNode }) {
     setTimeout(() => {
       setMode(newMode);
       localStorage.setItem("estateos_user_mode", newMode);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("userModeChanged"));
+      }
     }, 300);
 
     setTimeout(() => {
@@ -79,7 +77,17 @@ export function UserModeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserModeContext.Provider value={{ mode, selectMode, forceMode, initModeFromUser }}>
+    <UserModeContext.Provider
+      value={{
+        mode,
+        selectMode,
+        forceMode,
+        initModeFromUser,
+        isUpgradeModalOpen,
+        setIsUpgradeModalOpen,
+        upgradeModalType,
+      }}
+    >
       {children}
     </UserModeContext.Provider>
   );
@@ -87,6 +95,17 @@ export function UserModeProvider({ children }: { children: ReactNode }) {
 
 export const useUserMode = () => {
   const context = useContext(UserModeContext);
-  if (!context) throw new Error("useUserMode must be used within a UserModeProvider");
+  if (!context) {
+  return {
+    mode: "BUYER",
+    selectMode: () => {},
+    forceMode: () => {},
+    initModeFromUser: () => {},
+    isUpgradeModalOpen: false,
+    setIsUpgradeModalOpen: () => {},
+    upgradeModalType: null
+  } as any;
+  }
+
   return context;
 };

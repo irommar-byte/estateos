@@ -1,9 +1,17 @@
+import rateLimit from '@/lib/rateLimit';
+const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 500 });
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { encryptSession } from '@/lib/sessionUtils';
 
 export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+  const { isRateLimited } = limiter.check(5, ip);
+  if (isRateLimited) {
+    return new Response(JSON.stringify({ error: 'Zbyt wiele prób. Odczekaj 60 sekund.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const body = await req.json();
     const { login, password } = body;

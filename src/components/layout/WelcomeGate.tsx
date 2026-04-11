@@ -67,7 +67,7 @@ export default function WelcomeGate() {
 
   return (
     // ZMIANA TUTAJ: overflow-y-auto i flex-col pozwalają na swobodne przewijanie na małych laptopach
-    <div className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-3xl overflow-y-auto">
+    <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-3xl overflow-y-auto">
       <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 py-12 relative">
         {canClose && (
           <button onClick={() => setShowGate(false)} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-50 p-2 bg-black/50 rounded-full cursor-pointer">
@@ -90,7 +90,7 @@ export default function WelcomeGate() {
           )}
 
           {mode === "form" && (
-            <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-3xl bg-[#050505] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl my-auto">
+            <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-3xl bg-[#050505] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl my-auto" onClick={(e) => e.stopPropagation()}>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tighter mb-2">Czego <span className="text-white/30 italic">szukasz?</span></h2>
               <p className="text-white/40 mb-8 text-sm md:text-base">Wypełnienie formularza automatycznie założy Twoje konto. Wyślemy Ci hasło na e-mail.</p>
               

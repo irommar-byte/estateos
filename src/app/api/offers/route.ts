@@ -31,6 +31,7 @@ export async function POST(req: Request) {
   let sellerEmail: string | null = null;
   try {
     const body = await req.json();
+console.log("🔥 BODY:", body);
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('estateos_session') || cookieStore.get('luxestate_user');
 
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
           userId: dbUserId,
           title: body.title, propertyType: body.propertyType || "Mieszkanie", district: body.district || "Śródmieście",
           price: String(body.price).replace(/\D/g, ''), area: String(body.area).replace(',', '.'),
-          description: body.description || "", address: finalAddress, lat: Number(body.lat), lng: Number(body.lng),
+          description: body.description || "", address: finalAddress, lat: body.lat ? Number(body.lat) : 52.2297, lng: body.lng ? Number(body.lng) : 21.0122,
           apartmentNumber: body.apartmentNumber || null, imageUrl: body.imageUrl, images: body.images,
           advertiserType: body.advertiserType || "private", agencyName: body.agencyName || null,
           contactName: body.contactName, contactPhone: body.contactPhone, status: "pending_approval", expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

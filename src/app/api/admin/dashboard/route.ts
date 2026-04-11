@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       where: { email: parsed.email }
     });
 
-    if (!admin || admin.role !== 'admin') {
+    if (!admin || admin.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Brak dostępu' }, { status: 403 });
     }
 

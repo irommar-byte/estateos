@@ -9,44 +9,109 @@ export default function PremiumModeToggle({ currentUser }: { currentUser?: any }
 
   return (
     <div className="flex flex-col items-center justify-center pointer-events-auto relative z-50 w-full max-w-[600px] mx-auto">
-      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-        Wybór Przestrzeni Pracy
-      </span>
       
-      {/* KONTENER PRZYCISKÓW */}
-      <div className="flex flex-row gap-2 sm:gap-3 items-stretch justify-center w-full">
+      
+  
+      
+      
+      {/* KONTENER PRZYCISKÓW - APPLE GLASSMORPHISM */}
+      <div className="relative inline-flex items-center p-1.5 sm:p-2 bg-black/60 backdrop-blur-2xl border border-white/5 rounded-full shadow-[inset_0_2px_12px_rgba(0,0,0,1),_0_20px_40px_rgba(0,0,0,0.8)]">
         
         {/* PRZYCISK 1: INWESTOR */}
         <button 
-          onClick={() => currentUser?.isPro ? selectMode('BUYER', currentUser) : forceMode('BUYER')} 
-          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] transition-all duration-300 border shadow-lg cursor-pointer
-            ${mode === 'BUYER' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-105 z-10' : 'bg-[#0a0a0a] border-white/10 text-white/40 hover:border-white/30 hover:bg-[#111] hover:text-white/80'}`}
+          onClick={() => selectMode('BUYER', currentUser)} 
+          className={`relative flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 focus:outline-none overflow-hidden ${
+            mode === 'BUYER' 
+              ? "text-emerald-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] bg-gradient-to-b from-white/10 to-transparent" 
+              : "text-white/40 hover:text-white/90 hover:bg-white/5"
+          }`}
         >
-          <Wallet size={18} className="shrink-0" />
-          <span className="whitespace-nowrap mt-0.5 sm:mt-0">Inwestor</span>
+          {mode === 'BUYER' && (
+            <div className="absolute inset-0 z-0">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-emerald-400 blur-sm opacity-60"></div>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[1px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80"></div>
+            </div>
+          )}
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5">
+              {mode === 'BUYER' ? (
+                <>
+                  <div className="absolute inset-0 bg-emerald-400 rounded-full blur-[4px] opacity-80 animate-pulse" />
+                  <div className="relative w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" />
+                </>
+              ) : (
+                <div className="relative w-1.5 h-1.5 bg-white/10 rounded-full border border-white/20" />
+              )}
+            </div>
+            <Wallet size={14} className={`shrink-0 ${mode === 'BUYER' ? 'text-emerald-400' : ''}`} />
+            <span className="whitespace-nowrap drop-shadow-md">Inwestor</span>
+          </div>
         </button>
 
-        {/* PRZYCISK 2: PARTNER (AGENCJA) */}
+        {/* PRZYCISK 2: ESTATEOS™ PARTNER */}
         <button 
-          onClick={() => currentUser?.role === 'AGENCY' ? selectMode('AGENCY', currentUser) : selectMode('AGENCY', currentUser)} 
-          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] transition-all duration-300 border shadow-lg cursor-pointer
-            ${mode === 'AGENCY' ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-105 z-10' : 'bg-[#0a0a0a] border-white/10 text-white/40 hover:border-white/30 hover:bg-[#111] hover:text-white/80'}`}
+          onClick={() => selectMode('AGENCY', currentUser)} 
+          className={`relative flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 focus:outline-none overflow-hidden mx-1 ${
+            mode === 'AGENCY' 
+              ? "text-amber-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] bg-gradient-to-b from-white/10 to-transparent" 
+              : "text-white/40 hover:text-white/90 hover:bg-white/5"
+          }`}
         >
-          <Briefcase size={18} className="shrink-0" />
-          <span className="whitespace-nowrap mt-0.5 sm:mt-0">Partner</span>
+          {mode === 'AGENCY' && (
+            <div className="absolute inset-0 z-0">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-amber-400 blur-sm opacity-60"></div>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-80"></div>
+            </div>
+          )}
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5">
+              {mode === 'AGENCY' ? (
+                <>
+                  <div className="absolute inset-0 bg-amber-400 rounded-full blur-[4px] opacity-80 animate-pulse" />
+                  <div className="relative w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_10px_rgba(251,191,36,1)]" />
+                </>
+              ) : (
+                <div className="relative w-1.5 h-1.5 bg-white/10 rounded-full border border-white/20" />
+              )}
+            </div>
+            <Briefcase size={14} className={`shrink-0 ${mode === 'AGENCY' ? 'text-amber-400' : ''}`} />
+            <span className="whitespace-nowrap drop-shadow-md">EstateOS™Partner</span>
+          </div>
         </button>
 
         {/* PRZYCISK 3: WŁAŚCICIEL */}
         <button 
-          onClick={() => currentUser?.isPro ? selectMode('SELLER', currentUser) : forceMode('SELLER')} 
-          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] transition-all duration-300 border shadow-lg cursor-pointer
-            ${mode === 'SELLER' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] scale-105 z-10' : 'bg-[#0a0a0a] border-white/10 text-white/40 hover:border-white/30 hover:bg-[#111] hover:text-white/80'}`}
+          onClick={() => selectMode('SELLER', currentUser)} 
+          className={`relative flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 focus:outline-none overflow-hidden ${
+            mode === 'SELLER' 
+              ? "text-cyan-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] bg-gradient-to-b from-white/10 to-transparent" 
+              : "text-white/40 hover:text-white/90 hover:bg-white/5"
+          }`}
         >
-          <Building size={18} className="shrink-0" />
-          <span className="whitespace-nowrap mt-0.5 sm:mt-0">Właściciel</span>
+          {mode === 'SELLER' && (
+            <div className="absolute inset-0 z-0">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-cyan-400 blur-sm opacity-60"></div>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80"></div>
+            </div>
+          )}
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5">
+              {mode === 'SELLER' ? (
+                <>
+                  <div className="absolute inset-0 bg-cyan-400 rounded-full blur-[4px] opacity-80 animate-pulse" />
+                  <div className="relative w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,1)]" />
+                </>
+              ) : (
+                <div className="relative w-1.5 h-1.5 bg-white/10 rounded-full border border-white/20" />
+              )}
+            </div>
+            <Building size={14} className={`shrink-0 ${mode === 'SELLER' ? 'text-cyan-400' : ''}`} />
+            <span className="whitespace-nowrap drop-shadow-md">Właściciel</span>
+          </div>
         </button>
 
       </div>
+
     </div>
   );
 }

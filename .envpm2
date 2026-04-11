@@ -1,0 +1,1 @@
+AUTH_SECRET=super_secret_$(openssl rand -hex 32) restart nieruchomoscicurl -X POST http://localhost:3000/api/auth/login -H Content-Type: application/json -d {"email":"test@test.pl","password":"123456"}cd /home/rommar/apple-style-app

@@ -1,3 +1,5 @@
+import ModeTransition from '@/components/ui/ModeTransition';
+import UpgradeModal from '@/components/ui/UpgradeModal';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -26,6 +28,8 @@ export default function RootLayout({
           <Navbar />
           {children}
         </UserModeProvider>
+        <UpgradeModal />
+        <ModeTransition />
       </body>
     </html>
   );

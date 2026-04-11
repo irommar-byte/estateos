@@ -87,11 +87,11 @@ export default function AppointmentManager({ appointment, onClose }: any) {
   const neonRed = "bg-red-500/5 hover:bg-red-500/15 text-red-500 border border-red-500/20 hover:border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.05)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]";
 
   const modalContent = (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999999] flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
       
       {/* Usunięto sztywne h-[650px]. Dodano h-auto i elastyczne marginesy dla płynnego dopasowania */}
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] h-auto">
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] h-auto my-auto shrink-0" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#050505] shrink-0">
           <div className="flex items-center gap-3">
             {['CANCELLING', 'RATING', 'ACCEPTING', 'COUNTERING', 'DECLINING'].includes(view) && ( 

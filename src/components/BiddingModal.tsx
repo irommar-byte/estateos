@@ -34,10 +34,10 @@ export default function BiddingModal({ offerId, currentPrice, onClose }: { offer
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999999] flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
       
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden my-auto shrink-0" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 flex justify-between items-center border-b border-white/5 bg-[#050505]">
           <h3 className="text-sm font-black text-white uppercase tracking-widest">Oferta Zakupu</h3>
           <button onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white/50"><X size={16} /></button>

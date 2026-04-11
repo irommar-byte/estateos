@@ -1,72 +1,48 @@
-import bcrypt from "bcryptjs";
-import { encryptSession } from '@/lib/sessionUtils';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { encryptSession } from '@/lib/sessionUtils';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
-    const { login, email, password } = await req.json();
-    const identifier = login || email;
-    const emailNormalized = identifier;
-    if (!identifier || !password) {
-      return NextResponse.json({ success: false, message: "Brak danych logowania" }, { status: 400 });
+    const body = await req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: 'Brak danych' }, { status: 400 });
     }
 
-
-    const cleanInput = emailNormalized.replace(/\s+/g, '');
-    const isPhone = /^\+?[0-9]{7,15}$/.test(cleanInput);
-    const phoneFormatted = isPhone ? cleanInput.replace(/\D/g, '') : null;
-    const finalPhone = phoneFormatted ? (phoneFormatted.startsWith('48') ? phoneFormatted : '48' + phoneFormatted) : null;
-
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: emailNormalized.trim().toLowerCase() },
-          { phone: finalPhone || 'impossible_value' }
-        ]
-      }
-    });
-
-    if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
-      return NextResponse.json({ success: false, message: "Błędne dane logowania" }, { status: 401 });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.password) {
+      return NextResponse.json({ success: false, message: 'Błędne dane logowania' }, { status: 401 });
     }
 
-    // --- MAGIA PAKIETU PREMIUM: Wznowienie weryfikacji SMS ---
-    if (!user.isVerified) {
-      if (!user.otpExpiry || user.otpExpiry < new Date()) {
-         return NextResponse.json({ success: false, message: "Konto niezweryfikowane, a Twój kod SMS wygasł. Zarejestruj się ponownie." }, { status: 401 });
-      }
-      return NextResponse.json({ 
-         success: false, 
-         needs_otp: true, 
-         email: user.email,
-         phone: user.phone,
-         message: "Wpisz kod SMS, który dostałeś przy rejestracji." 
-      }, { status: 200 }); // Status 200 bo to krok logowania, nie błąd
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!user.password.startsWith("$2b$")) {
+      const newHash = await bcrypt.hash(password, 10);
+      await prisma.user.update({ where: { id: user.id }, data: { password: newHash } });
     }
-    // --------------------------------------------------------
 
-    const sessionPayload = encryptSession({ id: user.id, email: user.email, role: user.role });
+    if (!isValid) {
+      return NextResponse.json({ success: false, message: 'Błędne dane logowania' }, { status: 401 });
+    }
 
-    const response = NextResponse.json({ 
+    const session = encryptSession({ id: user.id, email: user.email, role: user.role || 'USER' });
+    
+    // Bezpieczne ustawianie ciasteczek
+    (await cookies()).set('estateos_session', session, { httpOnly: true, path: '/' });
+
+    return NextResponse.json({ 
       success: true, 
-      role: user.role,
-      name: user.name 
+      token: session, 
+      role: user.role || 'USER', 
+      name: user.name, 
+      id: user.id 
     });
 
-    response.cookies.set("estateos_session", sessionPayload, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30,
-      path: "/",
-    });
-
-    return response;
-
-  } catch (error) {
-    console.error("LOGIN ERROR:", error);
-    return NextResponse.json({ success: false, message: "Błąd serwera" }, { status: 500 });
+  } catch (e: any) {
+    console.error("🔥 BŁĄD LOGOWANIA:", e);
+    return NextResponse.json({ success: false, message: e.message || String(e) }, { status: 500 });
   }
 }

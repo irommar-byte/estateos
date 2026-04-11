@@ -963,7 +963,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
       {/* 1. STANDARDOWE OKNA (BŁĄD, LIMIT, SUKCES ZWYKŁY) */}
       <AnimatePresence>
         {actionModal !== "none" && actionModal !== "payment_success" && actionModal !== "oferta_plus" && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+          <div className="fixed inset-0 z-[999999] flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4 bg-black/90 backdrop-blur-xl">
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative text-center">
               <button onClick={() => setActionModal("none")} className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
               
@@ -1004,7 +1004,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
 
       {/* 2. RYTUAŁ PRO (ROLLS ROYCE) */}
       {actionModal === "payment_success" && (
-        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-black overflow-hidden font-sans m-0 p-0" style={{ margin: '-40px' }}>
+        <div className="fixed inset-0 z-[999999] flex flex-col items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center bg-black font-sans m-0 p-0" style={{ margin: '-40px' }}>
           
           {/* FAZA 1: Kosmiczne Zaćmienie (Apple Keynote Style) */}
           <AnimatePresence mode="wait">
@@ -1105,7 +1105,7 @@ export default function ClientForm({ initialUser }: { initialUser?: any }) {
       )}
 
       {actionModal === "oferta_plus" && (
-        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#030712] overflow-hidden font-sans m-0 p-0" style={{ margin: '-40px' }}>
+        <div className="fixed inset-0 z-[999999] flex flex-col items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center bg-[#030712] overflow-hidden font-sans m-0 p-0" style={{ margin: '-40px' }}>
           <AnimatePresence mode="wait">
             <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1, delay: 3.5 }} className="absolute inset-0 flex items-center justify-center z-10">
               <motion.div animate={{ opacity: [0, 0.4, 0] }} transition={{ duration: 3, ease: "easeInOut" }} className="absolute inset-0 bg-blue-600/30 blur-[150px] rounded-full" />

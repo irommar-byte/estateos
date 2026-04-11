@@ -23,7 +23,6 @@ const ProStatusBar = ({ user }: any) => {
 };
 
 import { Check } from "lucide-react";
-import PremiumModeToggle from '@/components/ui/PremiumModeToggle';
 import { useUserMode } from '@/contexts/UserModeContext';
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +36,9 @@ const WowOverlay = ({ type }: { type: 'investor' | 'agency' | 'plus' | 'renewal'
   if (type === 'plus') return <WowPlusOverlay />;
 
   const [step, setStep] = useState(0);
+
+  
+  
   useEffect(() => {
     setTimeout(() => setStep(1), 500);
     setTimeout(() => setStep(2), 1500);
@@ -57,7 +59,7 @@ const WowOverlay = ({ type }: { type: 'investor' | 'agency' | 'plus' | 'renewal'
   const bgGlow = isGold ? 'bg-yellow-500' : isBlue ? 'bg-blue-500' : 'bg-emerald-500';
   
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-3xl overflow-hidden">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] flex flex-col items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center bg-[#050505]/95 backdrop-blur-3xl overflow-hidden">
       <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", bounce: 0.6, duration: 1 }} className="text-center relative">
          {step >= 2 && (
             <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 4, 0], opacity: [1, 0] }} transition={{ duration: 1.5, ease: "easeOut" }} className={`absolute inset-0 rounded-full blur-[100px] pointer-events-none z-0 ${bgGlow}`} />
@@ -190,7 +192,7 @@ const WowPlusOverlay = () => {
             <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-200 to-zinc-500 leading-none tracking-tighter relative z-10 filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
               PAKIET<span className="text-[#0ea5e9] filter drop-shadow-[0_0_50px_rgba(14,165,233,1)]">+</span>
             </h1>
-            <div className="h-px w-full max-w-md bg-gradient-to-r from-transparent via-[#0ea5e9]/50 to-transparent my-2" />
+            <div className="h-px w-full max-w-md bg-gradient-to-r from-transparent via-[#0ea5e9]/50 to-transparent my-2 my-auto shrink-0" onClick={(e) => e.stopPropagation()} />
             <h2 className="text-3xl md:text-5xl font-light text-zinc-300 leading-none tracking-[0.2em] relative z-10">AKTYWOWANY</h2>
          </div>
       </div>
@@ -201,6 +203,21 @@ const WowPlusOverlay = () => {
 export default function CRMDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { mode } = useUserMode();
+
+  // --- DIRECT GLUE (SAFE UI SYNC) ---
+  const [localMode, setLocalMode] = useState(typeof window !== 'undefined' ? localStorage.getItem('estateos_user_mode') || 'BUYER' : 'BUYER');
+  useEffect(() => {
+      const handleModeSync = () => {
+          const current = localStorage.getItem('estateos_user_mode') || 'BUYER';
+          if (current !== localMode) {
+              setLocalMode(current);
+          }
+      };
+      window.addEventListener('userModeChanged', handleModeSync);
+      return () => window.removeEventListener('userModeChanged', handleModeSync);
+  }, [localMode]);
+  // ----------------------------------
+  
 
   const [managingApp, setManagingApp] = useState<any>(null);
 
@@ -288,51 +305,41 @@ export default function CRMDashboard() {
     setIsEditRadarOpen(true);
   };
 
-  const isPremium = currentUser?.isPro === true || currentUser?.isPro === 'true' || currentUser?.role === 'ADMIN' || currentUser?.role === 'AGENCY' || currentUser?.advertiserType === 'agency';
+  const isPremium = currentUser?.role === 'ADMIN' || currentUser?.role === 'AGENCY' || currentUser?.advertiserType === 'agency'; // HOTFIX: Zablokowano dostep dla isPro // HOTFIX: Zablokowano dostep dla isPro
   
-  const mockUsers = [
-    { id: 'usr-s01', role: 'SELLER', firstName: 'Michał', lastName: 'Zalewski', email: 'm.zalewski@example.com', phone: '+48 500 111 222', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s02', role: 'SELLER', firstName: 'Karolina', lastName: 'Wójcik', email: 'k.wojcik@example.com', phone: '+48 500 222 333', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s03', role: 'SELLER', firstName: 'Piotr', lastName: 'Kowalczyk', email: 'p.kowalczyk@example.com', phone: '+48 500 333 444', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s04', role: 'SELLER', firstName: 'Agnieszka', lastName: 'Lewandowska', email: 'a.lewandowska@example.com', phone: '+48 500 444 555', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s05', role: 'SELLER', firstName: 'Tomasz', lastName: 'Kamiński', email: 't.kaminski@example.com', phone: '+48 500 555 666', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s06', role: 'SELLER', firstName: 'Magdalena', lastName: 'Zielińska', email: 'm.zielinska@example.com', phone: '+48 500 666 777', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s07', role: 'SELLER', firstName: 'Krzysztof', lastName: 'Szymański', email: 'k.szymanski@example.com', phone: '+48 500 777 888', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s08', role: 'SELLER', firstName: 'Joanna', lastName: 'Dąbrowska', email: 'j.dabrowska@example.com', phone: '+48 500 888 999', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s09', role: 'SELLER', firstName: 'Marek', lastName: 'Kozłowski', email: 'm.kozlowski@example.com', phone: '+48 500 999 000', verificationStatus: 'VERIFIED' },
-    { id: 'usr-s10', role: 'SELLER', firstName: 'Ewa', lastName: 'Jankowska', email: 'e.jankowska@example.com', phone: '+48 500 000 111', verificationStatus: 'VERIFIED' },
-    { id: 'usr-b01', role: 'BUYER', firstName: 'Robert', lastName: 'Nowak', email: 'r.nowak@invest.com', phone: '+48 600 123 456', 
-      radarSettings: { location: 'Warszawa', budgetMin: 2000000, budgetMax: 10000000, minArea: 100, propertyType: 'Apartament' } },
-    { id: 'usr-b02', role: 'BUYER', firstName: 'Katarzyna', lastName: 'Wiśniewska', email: 'k.wisniewska@capital.com', phone: '+48 600 234 567', 
-      radarSettings: { location: 'Kraków', budgetMin: 5000000, budgetMax: 15000000, minArea: 200, propertyType: 'Willa' } },
-    { id: 'usr-b03', role: 'BUYER', firstName: 'Maciej', lastName: 'Włodarczyk', email: 'm.wlodarczyk@fund.com', phone: '+48 600 345 678', 
-      radarSettings: { location: 'Gdańsk', budgetMin: 1500000, budgetMax: 4000000, minArea: 60, propertyType: 'Penthouse' } },
-    { id: 'usr-b04', role: 'BUYER', firstName: 'Anna', lastName: 'Czarnecka', email: 'a.czarnecka@invest.com', phone: '+48 600 456 789', 
-      radarSettings: { location: 'Wrocław', budgetMin: 1000000, budgetMax: 3000000, minArea: 80, propertyType: 'Kamienica' } },
-    { id: 'usr-b05', role: 'BUYER', firstName: 'Grzegorz', lastName: 'Dudek', email: 'g.dudek@capital.com', phone: '+48 600 567 890', 
-      radarSettings: { location: 'Warszawa', budgetMin: 500000, budgetMax: 2000000, minArea: 40, propertyType: 'Gotowiec Inwestycyjny' } },
-    { id: 'usr-b06', role: 'BUYER', firstName: 'Sylwia', lastName: 'Adamczyk', email: 's.adamczyk@fund.com', phone: '+48 600 678 901', 
-      radarSettings: { location: 'Poznań', budgetMin: 1000000, budgetMax: 2500000, minArea: 70, propertyType: 'Apartament' } },
-    { id: 'usr-b07', role: 'BUYER', firstName: 'Rafał', lastName: 'Kruk', email: 'r.kruk@invest.com', phone: '+48 600 789 012', 
-      radarSettings: { location: 'Mazury', budgetMin: 3000000, budgetMax: 8000000, minArea: 150, propertyType: 'Rezydencja' } },
-    { id: 'usr-b08', role: 'BUYER', firstName: 'Aleksandra', lastName: 'Sikora', email: 'a.sikora@capital.com', phone: '+48 600 890 123', 
-      radarSettings: { location: 'Warszawa', budgetMin: 2000000, budgetMax: 5000000, minArea: 120, propertyType: 'Segment' } }
-  ];
+  const mockUsers: any[] = [];
 
-  const relationalOffers = [
-    { id: 'offer-001', sellerId: 'usr-s01', title: 'Penthouse Złota 44', price: 8500000, location: 'Warszawa, Śródmieście', area: 165, rooms: 4, imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80', createdAt: '2026-03-24T00:41:34.732Z', expiresAt: '2026-04-23T00:41:34.732Z' },
-    { id: 'offer-002', sellerId: 'usr-s02', title: 'Nowoczesna stodoła w lesie', price: 3200000, location: 'Konstancin-Jeziorna', area: 240, rooms: 5, imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80', createdAt: '2026-03-23T10:48:14.732Z', expiresAt: '2026-03-31T00:41:34.732Z' },
-    { id: 'offer-003', sellerId: 'usr-s03', title: 'Apartament z widokiem na Motławę', price: 2800000, location: 'Gdańsk, Śródmieście', area: 85, rooms: 3, imageUrl: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80', createdAt: '2026-03-24T00:41:34.732Z', expiresAt: '2026-04-23T00:41:34.732Z' },
-    { id: 'offer-004', sellerId: 'usr-s04', title: 'Zrewitalizowany Loft Fabryczny', price: 1950000, location: 'Łódź, Księży Młyn', area: 110, rooms: 3, imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80', createdAt: '2026-03-22T20:54:54.732Z', expiresAt: '2026-03-25T00:41:34.732Z' },
-    { id: 'offer-005', sellerId: 'usr-s05', title: 'Willa z prywatnym basenem', price: 12500000, location: 'Kraków, Wola Justowska', area: 450, rooms: 8, imageUrl: 'https://images.unsplash.com/photo-1613490908592-5d3164c4c11b?w=800&q=80', createdAt: '2026-03-21T17:08:14.732Z', expiresAt: '2026-03-22T00:41:34.732Z' },
-    { id: 'offer-006', sellerId: 'usr-s06', title: 'Gotowiec Inwestycyjny (3 Pakiety)', price: 1450000, location: 'Warszawa, Wola', area: 62, rooms: 3, imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80', createdAt: '2026-03-24T00:41:34.732Z', expiresAt: '2026-04-23T00:41:34.732Z' },
-    { id: 'offer-007', sellerId: 'usr-s07', title: 'Rezydencja z linią brzegową', price: 6700000, location: 'Mazury, Mikołajki', area: 320, rooms: 6, imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&q=80', createdAt: '2026-03-24T00:41:34.732Z', expiresAt: '2026-03-31T00:41:34.732Z' },
-    { id: 'offer-008', sellerId: 'usr-s08', title: 'Smart-Home Apartament', price: 2100000, location: 'Poznań, Jeżyce', area: 95, rooms: 4, imageUrl: 'https://images.unsplash.com/photo-1501183638710-841dd1904471?w=800&q=80', createdAt: '2026-03-23T02:28:14.732Z', expiresAt: '2026-03-25T00:41:34.732Z' },
-    { id: 'offer-009', sellerId: 'usr-s09', title: 'Kamienica Premium (Top Floor)', price: 3400000, location: 'Wrocław, Stare Miasto', area: 130, rooms: 4, imageUrl: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80', createdAt: '2026-03-24T00:41:34.732Z', expiresAt: '2026-04-23T00:41:34.732Z' },
-    { id: 'offer-010', sellerId: 'usr-s10', title: 'Ekskluzywny segment z ogrodem', price: 4100000, location: 'Warszawa, Wilanów', area: 180, rooms: 5, imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80', createdAt: '2026-03-22T07:01:34.732Z', expiresAt: '2026-03-31T00:41:34.732Z' }
-  ];
+  const relationalOffers: any[] = [];
 
   const [crmData, setCrmData] = useState<any>({ offers: [], contacts: [], appointments: [], bids: [], leadTransfers: [] });
+
+  // --- HOTFIX: Most komunikacyjny z Headerem ---
+  const [syncTrigger, setSyncTrigger] = useState(0);
+  
+  useEffect(() => {
+    const handler = () => {
+       console.log("🔄 Otrzymano sygnał zmiany trybu z Headera. Miękkie odświeżanie CRM...");
+       setSyncTrigger(prev => prev + 1);
+    };
+    window.addEventListener('userModeChanged', handler);
+    return () => window.removeEventListener('userModeChanged', handler);
+  }, []);
+
+  useEffect(() => {
+    if (syncTrigger > 0) {
+       // Kiedy przychodzi sygnał, odświeżamy dane dla nowego trybu w tle
+       const uid = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : null;
+       if (uid && typeof fetchData === 'function') {
+         fetchData(uid);
+       }
+       if (typeof fetchRadarData === 'function') {
+         fetchRadarData();
+       }
+       
+    }
+  }, [syncTrigger]);
+  // ---------------------------------------------
+
   
   const [likedOfferIds, setLikedOfferIds] = useState<string[]>(['offer-001', 'offer-007']);
 
@@ -535,7 +542,7 @@ export default function CRMDashboard() {
   
   if (isBooting) {
     return (
-        <div className="fixed inset-0 z-[999999] bg-[#050505] flex flex-col items-center justify-center font-sans overflow-hidden">
+        <div className="fixed inset-0 z-[999999] bg-[#050505] flex flex-col items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center font-sans overflow-hidden">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-[#D4AF37]/5 to-emerald-500/5 rounded-full blur-[100px] opacity-50 animate-pulse"></div>
            
            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1, ease: "easeOut" }} className="relative z-10 flex flex-col items-center">
@@ -582,7 +589,7 @@ export default function CRMDashboard() {
         
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 px-2 md:px-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-2">Panel Inwestora</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-2">{localMode === 'BUYER' ? 'PANEL INWESTORA' : localMode === 'SELLER' ? 'PANEL WŁAŚCICIELA' : 'PANEL PARTNERA'}</p>
             <div className="flex items-center gap-4 flex-wrap">
               <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white">
               {currentUser?.firstName 
@@ -626,7 +633,7 @@ export default function CRMDashboard() {
         {isPremium && <ProWidget currentUser={currentUser} />}
 
         <div className="flex justify-center mb-8 relative z-30">
-          <PremiumModeToggle />
+          
         </div>
 
         <div className="flex justify-center mb-10 relative z-20">
@@ -647,9 +654,9 @@ export default function CRMDashboard() {
                 )}
                 <span className="relative z-20">
                     {tab === 'radar' 
-                        ? (mode === 'BUYER' ? 'Radar Inwestycji' : 'System Radar') 
+                        ? (localMode === 'BUYER' ? 'Radar Inwestycji' : 'System Radar') 
                         : tab === 'offers'
-                        ? (mode === 'BUYER' ? 'Obserwowane' : 'Zarządzaj Ogłoszeniami')
+                        ? (localMode === 'BUYER' ? 'Obserwowane' : 'Zarządzaj Ogłoszeniami')
                         : tab === 'planowanie' ? 'Planowanie' : 'Transakcje'}
                  </span>
               </button>
@@ -700,7 +707,7 @@ export default function CRMDashboard() {
   <div className="relative w-full h-full flex items-center justify-center perspective-[800px]">
     <div className="absolute inset-0 rounded-full shadow-[inset_0_0_20px_rgba(59,130,246,0.4)] bg-gradient-to-tr from-blue-950/40 to-transparent" />
     <motion.div animate={{ y: [-3, 3, -3], rotateX: [0, 15, 0], rotateY: [-10, 10, -10] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="relative z-10">
-      {mode === 'BUYER' ? 
+      {localMode === 'BUYER' ? 
         <Wallet size={38} className="text-blue-400 drop-shadow-[0_10px_10px_rgba(59,130,246,0.6)]" strokeWidth={1.5} /> : 
         <LayoutGrid size={38} className="text-blue-400 drop-shadow-[0_10px_10px_rgba(59,130,246,0.6)]" strokeWidth={1.5} />
       }
@@ -751,14 +758,14 @@ export default function CRMDashboard() {
 
           <div className="relative z-10 text-center md:text-left">
             <h2 className="text-3xl font-black text-white tracking-tighter mb-2 transition-colors">
-               {activeTab === 'radar' && (mode === 'BUYER' ? <>Radar <span className="text-emerald-500">Okazji</span></> : <>Radar <span className="text-emerald-500">Kupców</span></>)}
-               {activeTab === 'offers' && (mode === 'BUYER' ? <>Moje <span className="text-blue-500">Obserwowane</span></> : <>Menedżer <span className="text-blue-500">Ogłoszeń</span></>)}
+               {activeTab === 'radar' && (localMode === 'BUYER' ? <>Radar <span className="text-emerald-500">Okazji</span></> : <>Radar <span className="text-emerald-500">Kupców</span></>)}
+               {activeTab === 'offers' && (localMode === 'BUYER' ? <>Moje <span className="text-blue-500">Obserwowane</span></> : <>Menedżer <span className="text-blue-500">Ogłoszeń</span></>)}
                {activeTab === 'planowanie' && <>Centrum <span className="text-purple-500">Planowania</span></>}
                 {activeTab === 'transakcje' && <>Szyfrowane <span className="text-amber-500">Deal Roomy</span></>}
             </h2>
             <p className="text-white/60 text-sm max-w-2xl leading-relaxed">
-               {activeTab === 'radar' && (mode === 'BUYER' ? 'Sztuczna inteligencja śledzi rynek i wyłapuje oferty off-market spełniające Twoje kryteria inwestycyjne w czasie rzeczywistym.' : 'Algorytm skanuje bazę zweryfikowanych inwestorów i dobiera kupców pod Twoje oferty. Wyślij im ekskluzywne powiadomienie PUSH, zanim ktokolwiek dowie się o sprzedaży.')}
-               {activeTab === 'offers' && (mode === 'BUYER' ? 'Śledź wybrane oferty, zarządzaj swoimi propozycjami cenowymi i otrzymuj alerty o zmianach cen interesujących Cię inwestycji.' : 'Edytuj ogłoszenia, sprawdzaj statystyki wyświetleń, zarządzaj zdjęciami i aktualizuj ceny swoich nieruchomości. Zyskaj pełną kontrolę nad procesem sprzedaży.')}
+               {activeTab === 'radar' && (localMode === 'BUYER' ? 'Sztuczna inteligencja śledzi rynek i wyłapuje oferty off-market spełniające Twoje kryteria inwestycyjne w czasie rzeczywistym.' : 'Algorytm skanuje bazę zweryfikowanych inwestorów i dobiera kupców pod Twoje oferty. Wyślij im ekskluzywne powiadomienie PUSH, zanim ktokolwiek dowie się o sprzedaży.')}
+               {activeTab === 'offers' && (localMode === 'BUYER' ? 'Śledź wybrane oferty, zarządzaj swoimi propozycjami cenowymi i otrzymuj alerty o zmianach cen interesujących Cię inwestycji.' : 'Edytuj ogłoszenia, sprawdzaj statystyki wyświetleń, zarządzaj zdjęciami i aktualizuj ceny swoich nieruchomości. Zyskaj pełną kontrolę nad procesem sprzedaży.')}
                {activeTab === 'planowanie' && 'Umawiaj prezentacje nieruchomości, zarządzaj spotkaniami negocjacyjnymi i koordynuj kalendarz z agentami oraz klientami. Twój czas jest kluczowy.'}
                {activeTab === 'transakcje' && 'Szyfrowane Deal Roomy. Kontroluj oferty cenowe, wymieniaj bezpiecznie dokumenty i finalizuj transakcje w jednym miejscu.'}
             </p>
@@ -827,7 +834,7 @@ export default function CRMDashboard() {
             {/* MODAL KONFIGURACJI RADARU */}
             <AnimatePresence>
             {isEditRadarOpen && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-md flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
                     <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
                         <button onClick={() => setIsEditRadarOpen(false)} className="absolute top-6 right-6 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer z-50"><X size={20}/></button>
@@ -916,7 +923,7 @@ export default function CRMDashboard() {
 
             <AnimatePresence>
               {isRadarUpdating && (
-                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[9999999] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-4">
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-3xl flex flex-col items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
                     <motion.div animate={{ scale: [1, 1.3, 1], rotate: [0, 120, 240, 360] }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }} className="w-48 h-48 rounded-full border border-emerald-500/30 flex items-center justify-center shadow-[0_0_150px_rgba(16,185,129,0.2)] mb-10 relative overflow-hidden">
                        <div className="absolute inset-0 rounded-full border-4 border-emerald-500/10 animate-[ping_3s_linear_infinite]" />
                        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/20 to-transparent animate-[pulse_2s_linear_infinite]" />
@@ -986,7 +993,7 @@ export default function CRMDashboard() {
             <div className="col-span-full flex flex-col items-center justify-center py-20 border border-dashed border-emerald-500/20 rounded-[2.5rem] bg-[#050505] relative overflow-hidden">
                 <Radar size={48} className="text-emerald-500/20 mb-6 animate-spin-slow" />
                 <p className="text-white/40 font-bold uppercase tracking-widest text-sm relative z-10 text-center px-4">
-                  {mode === 'BUYER' ? 'Radar skanuje rynek off-market. Wyniki pojawią się tutaj.' : 'Czekamy na dopasowanie zweryfikowanych inwestorów do Twoich ogłoszeń.'}
+                  {localMode === 'BUYER' ? 'Radar skanuje rynek off-market. Wyniki pojawią się tutaj.' : 'Czekamy na dopasowanie zweryfikowanych inwestorów do Twoich ogłoszeń.'}
                 </p>
                 <div className="mt-6 flex gap-2">
                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -1002,13 +1009,13 @@ export default function CRMDashboard() {
 
         {activeTab === 'offers' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(!crmData.offers || (mode === 'BUYER' ? crmData.offers.filter((o:any) => likedOfferIds.includes(o.id.toString())) : crmData.offers).length === 0) ? (
+            {(!crmData.offers || (localMode === 'BUYER' ? crmData.offers.filter((o:any) => likedOfferIds.includes(o.id.toString())) : crmData.offers).length === 0) ? (
               <div className="col-span-full flex flex-col items-center justify-center py-24 border border-dashed border-white/10 rounded-[2.5rem] bg-[#0a0a0a] relative overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-900/5 pointer-events-none" />
                 <p className="text-white/40 font-bold uppercase tracking-widest text-sm mb-8 relative z-10">
-                  {mode === 'BUYER' ? 'Nie obserwujesz jeszcze żadnych ofert.' : 'Nie masz jeszcze żadnych ogłoszeń.'}
+                  {localMode === 'BUYER' ? 'Nie obserwujesz jeszcze żadnych ofert.' : 'Nie masz jeszcze żadnych ogłoszeń.'}
                 </p>
-                {mode === 'SELLER' && (
+                {localMode === 'SELLER' && (
                   <motion.button
                     animate={{ scale: [1, 1.05, 1], boxShadow: ['0px 0px 0px rgba(59,130,246,0)', '0px 0px 30px rgba(59,130,246,0.3)', '0px 0px 0px rgba(59,130,246,0)'] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -1016,14 +1023,14 @@ export default function CRMDashboard() {
                     <span className="text-xl leading-none text-blue-400 group-hover:text-white">+</span> DODAJ SWOJĄ NIERUCHOMOŚĆ
                   </motion.button>
                 )}
-                {mode === 'BUYER' && (
+                {localMode === 'BUYER' && (
                   <button className="relative z-10 px-8 py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full font-black uppercase tracking-wider text-sm transition-all duration-300">
                     Odkryj Rynek
                   </button>
                 )}
               </div>
             ) : (
-              [...(mode === 'SELLER' ? [{ id: 'ADD_NEW_BTN', isDummy: true }] : []), ...(mode === 'BUYER' ? crmData.offers.filter((o:any) => likedOfferIds.includes(o.id.toString())) : crmData.offers)].map((offer: any) => {
+              [...(localMode === 'SELLER' ? [{ id: 'ADD_NEW_BTN', isDummy: true }] : []), ...(localMode === 'BUYER' ? crmData.offers.filter((o:any) => likedOfferIds.includes(o.id.toString())) : crmData.offers)].map((offer: any) => {
                 if (offer.isDummy) return (
                   <motion.div 
                     key="add-new-btn"
@@ -1053,7 +1060,7 @@ export default function CRMDashboard() {
                     {!isArchived && <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>}
 
                     
-                    {mode === 'BUYER' && !offer.isDummy && (
+                    {localMode === 'BUYER' && !offer.isDummy && (
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
@@ -1136,7 +1143,7 @@ export default function CRMDashboard() {
 
                     
                     {/* MODUŁ NEGOCJACJI (BIDS) */}
-                    {offerBids.length > 0 && mode === 'SELLER' && !isArchived && (
+                    {offerBids.length > 0 && localMode === 'SELLER' && !isArchived && (
                         <div className="mb-6 bg-gradient-to-br from-amber-500/10 to-amber-700/5 border border-amber-500/30 rounded-[1.5rem] p-4 shadow-[0_0_30px_rgba(245,158,11,0.15)] relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-[40px] pointer-events-none"></div>
                             <h4 className="text-[10px] uppercase tracking-widest font-black text-amber-500 mb-3 flex items-center gap-2"><DollarSign size={14} /> Oczekujące Propozycje</h4>
@@ -1316,7 +1323,7 @@ export default function CRMDashboard() {
       
         <AnimatePresence>
           {selectedDate && (
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6" onClick={() => setSelectedDate(null)}>
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/90 backdrop-blur-xl flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4 sm:p-6" onClick={() => setSelectedDate(null)}>
                 <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} onClick={e => e.stopPropagation()} className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)]">
                    <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-transparent">
                       <div>
@@ -1624,7 +1631,7 @@ export default function CRMDashboard() {
 
       <AnimatePresence>
         {offerToArchive && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-xl flex items-start overflow-y-auto pt-10 pb-10 sm:pt-20 sm:pb-20 justify-center p-4">
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-center">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
               
