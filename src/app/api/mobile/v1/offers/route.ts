@@ -1,24 +1,32 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// 1. POBIERANIE OFERT NA RADAR (Tylko ACTIVE i posiadające lat/lng)
+// 1. POBIERANIE OFERT NA RADAR ORAZ DO PROFILU (Obsługa parametru includeAll)
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const includeAll = searchParams.get('includeAll') === 'true';
+
+  // LOG DLA DEBUGOWANIA - zobaczysz to w 'pm2 logs'
+  console.log("📱 MOBILE API GET: includeAll =", includeAll);
+
+  const whereClause = includeAll 
+    ? {} 
+    : { status: 'ACTIVE', lat: { not: null }, lng: { not: null } };
+
   try {
     const offers = await prisma.offer.findMany({
-      where: {
-        status: 'ACTIVE',
-        lat: { not: null },
-        lng: { not: null }
-      },
+      where: whereClause,
       include: {
         user: {
           select: { name: true, email: true, phone: true, image: true, companyName: true, role: true }
         }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     });
     return NextResponse.json({ success: true, offers });
   } catch (error: any) {
-    console.error("🔥 BŁĄD POBIERANIA OFERT NA RADAR:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

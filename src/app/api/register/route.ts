@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { encryptSession } from '@/lib/sessionUtils';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, name } = body;
+    // Odbieramy NOWE, potężne pola z aplikacji mobilnej
+    const { email, password, name, phone, role } = body;
 
     if (!email || !password) {
       return NextResponse.json({ success: false, message: 'Brak danych' }, { status: 400 });
@@ -19,18 +20,25 @@ export async function POST(req: Request) {
     }
 
     const hashed = await bcrypt.hash(password, 10);
+
+    // Inteligentne mapowanie ról z wizytówki mobilnej
+    let dbRole = "USER";
+    if (role === "PARTNER" || role === "AGENT") dbRole = "AGENT";
+    if (role === "ADMIN") dbRole = "ADMIN";
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashed,
         name: name || "Użytkownik",
-        role: "USER"
+        phone: phone || null,  // Zapisujemy telefon prosto do bazy!
+        role: dbRole
       }
     });
 
     const session = encryptSession({ id: user.id, email: user.email, role: user.role || 'USER' });
     
-    // Bezpieczne ustawianie ciasteczek w nowym Next.js
+    // Bezpieczne ustawianie ciasteczek
     (await cookies()).set('estateos_session', session, { httpOnly: true, path: '/' });
 
     return NextResponse.json({ 

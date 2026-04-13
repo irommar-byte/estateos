@@ -123,7 +123,8 @@ export default function SzukajNieruchomosci() {
       const res = await fetch("/api/szukaj/weryfikacja", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: formData.email, otp }) });
       if (res.ok) { 
           // AUTOMATIC LOGIN AFTER VERIFICATION
-          await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email, password: formData.password }) }).catch(() => {});
+          await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email, password: formData.password }) });
+          window.location.href = '/moje-konto';
           
           setIsVerification(false); 
           setIsSuccess(true); 

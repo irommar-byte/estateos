@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import nodemailer from 'nodemailer';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 function normalizePhone(input: string) {
   const clean = input.replace(/\D/g, '');

@@ -9,9 +9,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     const offers = await prisma.offer.findMany({
-      where: { status: { in: ["active"] } },
+      where: { status: { in: ["ACTIVE"] } },
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true, email: true, buyerType: true } } }
+      include: { user: { select: { name: true, email: true,   } } }
     });
     return new NextResponse(JSON.stringify(offers), {
       status: 200,
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
         "Expires": "0"
       }
     });
-  } catch (error) {
+  } catch (error) { console.error('OFFERS ERROR:', error);
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
   }
 }
@@ -86,7 +86,7 @@ console.log("🔥 BODY:", body);
       try {
         let hashedPassword = body.password;
         if (body.password) {
-            const bcrypt = require('bcryptjs');
+            const bcrypt = require('bcrypt');
             hashedPassword = await bcrypt.hash(body.password, 10);
         }
 
@@ -163,7 +163,7 @@ console.log("🔥 BODY:", body);
           description: body.description || "", address: finalAddress, lat: body.lat ? Number(body.lat) : 52.2297, lng: body.lng ? Number(body.lng) : 21.0122,
           apartmentNumber: body.apartmentNumber || null, imageUrl: body.imageUrl, images: body.images,
           advertiserType: body.advertiserType || "private", agencyName: body.agencyName || null,
-          contactName: body.contactName, contactPhone: body.contactPhone, status: "pending_approval", expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          contactName: body.contactName, contactPhone: body.contactPhone, status: "PENDING_APPROVAL", expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           rooms: body.rooms ? String(body.rooms) : null, floor: body.floor ? String(body.floor) : null,
           year: body.buildYear ? String(body.buildYear) : null, plotArea: body.plotArea ? String(body.plotArea) : null,
           amenities: body.amenities || "", floorPlan: body.floorPlan || null,

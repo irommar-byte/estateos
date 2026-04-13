@@ -28,7 +28,7 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await localStorage.removeItem("token"); window.location.href = "/login";
     localStorage.removeItem("luxestate_user");
     window.location.href = "/login";
   };

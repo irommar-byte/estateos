@@ -7,94 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ----------------------------------------------------
-// 1. ENUMY - Słowniki systemu
-// ----------------------------------------------------
-enum Role {
-  USER
-  AGENT
-  ADMIN
-}
-
-enum PlanType {
-  NONE
-  PRO
-  AGENCY
-}
-
-enum OfferStatus {
-  PENDING
-  ACTIVE
-  REJECTED
-  ARCHIVED
-  SOLD
-  RENTED
-}
-
-// ----------------------------------------------------
-// 2. MODEL UŻYTKOWNIKA (CRM & Auth)
-// ----------------------------------------------------
 model User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  phone         String?   @unique
-  password      String?  
+  id            Int             @id @default(autoincrement())
+  email         String          @unique
+  phone         String?         @unique
+  password      String?
   name          String?
-  image         String?   @db.Text
-  
-  // Dane firmowe (Dla Partnerów)
+  image         String?         @db.Text
   companyName   String?
   nip           String?
-  
-  role          Role      @default(USER)
-  planType      PlanType  @default(NONE)
-  extraListings Int       @default(0)
+  role          Role            @default(USER)
+  planType      PlanType        @default(NONE)
+  extraListings Int             @default(0)
   proExpiresAt  DateTime?
-  
-  expoPushToken String?  
-
-  isVerified    Boolean   @default(false)
+  expoPushToken String?
+  isVerified    Boolean         @default(false)
   otpCode       String?
   otpExpiry     DateTime?
-  
-  // Oś czasu
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  offers        Offer[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   accounts      Account[]
-  sessions      Session[]
   Authenticator Authenticator[]
+  offers        Offer[]
+  sessions      Session[]
 }
 
-// ----------------------------------------------------
-// 3. MODEL OFERTY (Pełen silnik EstateOS)
-// ----------------------------------------------------
 model Offer {
   id              Int         @id @default(autoincrement())
   title           String
   description     String?     @db.Text
-  
-  // Kategoryzacja
   transactionType String      @default("SALE")
   propertyType    String      @default("APARTMENT")
   condition       String      @default("READY")
-  
-  // Finanse
   price           Float
   pricePerSqm     Float?
   adminFee        Float?
   deposit         Float?
-  
-  // Metryka
   area            Float
   plotArea        Float?
   rooms           Int?
   floor           Int?
   totalFloors     Int?
   yearBuilt       Int?
-  
-  // Udogodnienia (Filtry)
   hasBalcony      Boolean     @default(false)
   hasElevator     Boolean     @default(false)
   hasStorage      Boolean     @default(false)
@@ -103,8 +57,6 @@ model Offer {
   isFurnished     Boolean     @default(false)
   petsAllowed     Boolean     @default(false)
   airConditioning Boolean     @default(false)
-  
-  // Lokalizacja i Radar
   city            String      @default("Warszawa")
   district        String      @default("OTHER")
   street          String?
@@ -112,28 +64,20 @@ model Offer {
   lat             Float?
   lng             Float?
   isExactLocation Boolean     @default(true)
-  
-  // Media
   images          String?     @db.Text
   videoUrl        String?
   floorPlanUrl    String?
-  
-  // Status Cyklu Życia Ogłoszenia
   status          OfferStatus @default(PENDING)
-  expiresAt       DateTime?   // Kiedy znika do archiwum (30 dni)
-  promotedUntil   DateTime?   // Kiedy kończy się promowanie
-  
+  expiresAt       DateTime?
+  promotedUntil   DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
-  
-  // Właściciel / Agent
   userId          Int
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Offer_userId_fkey")
 }
 
-// ----------------------------------------------------
-// 4. MODELE NEXT-AUTH (Logowanie systemowe)
-// ----------------------------------------------------
 model Account {
   id                String  @id @default(cuid())
   userId            Int
@@ -147,10 +91,10 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
 }
 
 model Session {
@@ -159,6 +103,8 @@ model Session {
   userId       Int
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Session_userId_fkey")
 }
 
 model VerificationToken {
@@ -178,8 +124,28 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
+}
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum PlanType {
+  NONE
+  PRO
+  AGENCY
+}
+
+enum OfferStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  ARCHIVED
+  SOLD
+  RENTED
 }

@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       role: user.role 
     });
 
+    // 🚀 ODBLOKOWANE: Zwracamy pełną wizytówkę Premium!
     return NextResponse.json({
       success: true,
       token,
@@ -38,6 +39,9 @@ export async function POST(req: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
+        phone: user.phone,            // <-- Dodane!
+        image: user.image,            // <-- Dodane! (Awatar)
+        isVerified: user.isVerified,  // <-- Dodane! (Status SMS)
         role: user.role,
         planType: user.planType
       }

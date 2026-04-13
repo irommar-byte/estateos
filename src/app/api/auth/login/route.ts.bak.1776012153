@@ -4,12 +4,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { encryptSession } from '@/lib/sessionUtils';
+import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const email = body.email || body.login;
-    const password = body.password;
+    const email = body.email || body.login; const password = body.password;
 
     if (!email || !password) {
       return NextResponse.json({ success: false, message: 'Brak danych' }, { status: 400 });
@@ -31,47 +31,23 @@ export async function POST(req: Request) {
     }
 
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const token = await new SignJWT({ id: user.id, email: user.email, role: user.role || "USER" })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("7d")
-      .sign(secret);
+const token = await new SignJWT({ id: user.id, email: user.email, role: user.role || "USER" })
+  .setProtectedHeader({ alg: "HS256" })
+  .setExpirationTime("7d")
+  .sign(secret);
+console.log("TOKEN_DEBUG:", token);
+    
+    // Bezpieczne ustawianie ciasteczek
+    
 
-    const estateosSession = encryptSession({
-      id: user.id,
-      email: user.email,
-      role: user.role || "USER",
-      name: user.name || "",
+    return NextResponse.json({ 
+      success: true, 
+      token: token, 
+      role: user.role || 'USER', 
+      name: user.name, 
+      id: user.id 
     });
 
-    const response = NextResponse.json({
-      success: true,
-      token,
-      role: user.role || 'USER',
-      name: user.name,
-      id: user.id
-    });
-
-    response.cookies.set({
-      name: 'estateos_session',
-      value: estateosSession,
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    response.cookies.set({
-      name: 'luxestate_user',
-      value: estateosSession,
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return response;
   } catch (e: any) {
     console.error("🔥 BŁĄD LOGOWANIA:", e);
     return NextResponse.json({ success: false, message: e.message || String(e) }, { status: 500 });

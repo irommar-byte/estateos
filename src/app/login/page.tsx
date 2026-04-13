@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { signIn } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,23 +58,27 @@ export default function LoginPage() {
 
     try {
       const res = await fetch("/api/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: email, password }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
+
       if (res.ok && data.success) {
-        window.location.href = data.role === 'ADMIN' ? "/centrala" : "/moje-konto";
+        window.location.href = data.role === "ADMIN" ? "/centrala" : "/moje-konto";
       } else if (data.needs_otp) {
         setPendingPhone(data.phone || email);
-        setView('verify_otp');
+        setView("verify_otp");
         setSuccessMsg(data.message);
         setLoading(false);
       } else {
         setError(data.message || "Błędny e-mail lub hasło.");
         setLoading(false);
       }
+
     } catch (err) {
-      setError("Błąd połączenia z serwerem.");
+      setError("Błąd połączenia.");
       setLoading(false);
     }
   };
@@ -127,27 +131,36 @@ export default function LoginPage() {
     setLoading(true); setError(""); setSuccessMsg("");
 
     try {
-      const res = await fetch("/api/szukaj/weryfikacja", {
+      const resVerify = await fetch("/api/szukaj/weryfikacja", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otpCode: verifyOtp }),
       });
-      const data = await res.json();
+      const dataVerify = await resVerify.json();
       
-      if (res.ok) {
-        // Jeśli weryfikacja SMS przeszła, po prostu logujemy ponownie, by złapać ciastko sesji
-        const loginRes = await fetch("/api/auth/login", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ login: email, password }),
+      if (resVerify.ok) {
+        // po weryfikacji logujemy użytkownika
+        const resLogin = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
         });
-        const loginData = await loginRes.json();
-        if (loginRes.ok && loginData.success) {
-           window.location.href = loginData.role === 'ADMIN' ? "/centrala" : "/moje-konto";
+
+        const dataLogin = await resLogin.json();
+
+        if (dataLogin.success) {
+          localStorage.setItem("token", dataLogin.token);
+          window.location.replace("/moje-konto/crm");
+        } else {
+          setError(dataLogin.message || "Błąd logowania");
         }
       } else {
-        setError(data.message || "Błędny kod SMS.");
+        setError(dataVerify.error || "Błąd weryfikacji kodu");
       }
-    } catch (err) { setError("Błąd połączenia."); }
-    finally { setLoading(false); }
+    } catch (err) {
+      setError("Błąd połączenia.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderForm = () => {

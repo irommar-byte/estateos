@@ -2,7 +2,7 @@ import rateLimit from '@/lib/rateLimit';
 const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 500 });
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { encryptSession } from '@/lib/sessionUtils';
 
 export async function POST(req: Request) {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { login, password } = body;
+    const login = body.login || body.email; const password = body.password;
 
     if (!login || !password) {
       return NextResponse.json({ error: 'Brak danych' }, { status: 400 });

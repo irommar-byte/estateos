@@ -1,11 +1,13 @@
-import CredentialsProvider from "next-auth/providers/credentials";
 import NextAuth, { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import GoogleProvider from "next-auth/providers/google";
+import bcrypt from "bcrypt"; // <- PRAWIDŁOWY, GLOBALNY IMPORT
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  debug: true, // 🚨 TO WŁĄCZY GŁOŚNE RAPORTOWANIE BŁĘDÓW W PM2!
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -19,9 +21,10 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email }
         });
         if (!user || !user.password) return null;
-        const bcrypt = require("bcryptjs");
+        
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) return null;
+        
         return {
           id: String(user.id),
           email: user.email,
@@ -34,13 +37,12 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "BRAK_ID",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "BRAK_SECRET",
     }),
-    // Tutaj w kolejnym kroku dodamy Passkeys (FaceID)
   ],
   session: {
     strategy: "jwt",
   },
   pages: {
-    signIn: '/login', // Wskazujemy naszą luksusową stronę logowania
+    signIn: '/login',
   },
   callbacks: {
     async jwt({ token, user }) {

@@ -8,3 +8,4 @@ node_modules
 *.sqlite
 public/uploads
 public/uploads/
+.env.pre-mariadb
