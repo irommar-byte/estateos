@@ -1,0 +1,363 @@
+From ab23ffbcd5a453d2d9fe1397e9385c5a89702fa4 Mon Sep 17 00:00:00 2001
+From: Marian Romanienko <irommar@me.com>
+Date: Thu, 30 Jul 2026 00:16:05 +0200
+Subject: [PATCH] Replace Intelligence sheet jargon with human copy and real
+ progress.
+
+Drop the param-dump title and fake 82% ready number; show a clear next step, soft evidence chips, and continuous stage progress.
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+---
+ src/app/api/discovery/pulse/route.ts   | 19 +++++----
+ src/components/home/DiscoveryPulse.tsx | 48 ++++++++++++++++-------
+ src/i18n/dictionaries.ts               | 24 +++++++++---
+ src/i18n/dictionaryUk.ts               | 10 +++--
+ src/lib/estateOsGuideContext.ts        | 53 +++++++++++++++++---------
+ 5 files changed, 104 insertions(+), 50 deletions(-)
+
+diff --git a/src/app/api/discovery/pulse/route.ts b/src/app/api/discovery/pulse/route.ts
+index 94c431d0..80ddf616 100644
+--- a/src/app/api/discovery/pulse/route.ts
++++ b/src/app/api/discovery/pulse/route.ts
+@@ -17,17 +17,15 @@ export async function GET(req: Request) {
+     const contradictionIndex = guide.contradictionIndex ?? 0;
+     const progress = Math.round(Math.min(1, Math.max(0, guide.stageProgress || 0)) * 100);
+ 
+-    const normalizedSummary = String(guide.summaryLine || "").trim();
+-    const hasDirectionSignal = guide.decisionCount > 0;
++    // Human headline / body — never dump "szuka w: … · budżet …" as the title.
+     const directionLine =
+-      hasDirectionSignal && normalizedSummary
+-        ? normalizedSummary
+-        : "Budujemy Twój kierunek z każdej decyzji.";
+-
++      String(guide.nextStep?.title || "").trim() ||
++      "Budujemy Twój kierunek z każdej decyzji.";
+     const suggestion =
+       contradictionIndex >= 0.55
+-        ? "Sygnały się mieszają. Zrób 2-3 spokojne decyzje „Nie dla mnie” z powodem."
+-        : guide.nextStep?.title || "Kierunek się ostrzy. Kontynuuj spokojnie ocenianie ofert.";
++        ? "Sygnały się mieszają. Zrób 2–3 spokojne decyzje „Nie dla mnie” z powodem."
++        : String(guide.body || "").trim() ||
++          "Kierunek się ostrzy. Kontynuuj spokojnie ocenianie ofert.";
+ 
+     return NextResponse.json(
+       {
+@@ -38,9 +36,10 @@ export async function GET(req: Request) {
+           progress,
+           confidence,
+           contradictionIndex,
+-          directionLine: directionLine || "Budujemy Twój kierunek z każdej decyzji.",
+-          summaryLine: guide.summaryLine,
++          directionLine,
+           suggestion,
++          evidenceHint: guide.evidenceHint,
++          summaryLine: guide.summaryLine,
+           decisionCount: guide.decisionCount,
+           primaryCta: guide.primaryCta,
+           secondaryCta: guide.secondaryCta,
+diff --git a/src/components/home/DiscoveryPulse.tsx b/src/components/home/DiscoveryPulse.tsx
+index 861b6228..67cf995c 100644
+--- a/src/components/home/DiscoveryPulse.tsx
++++ b/src/components/home/DiscoveryPulse.tsx
+@@ -55,6 +55,8 @@ type PulsePayload = {
+   contradictionIndex: number;
+   directionLine: string;
+   suggestion: string;
++  evidenceHint?: string | null;
++  decisionCount?: number;
+   primaryCta: { label: string; href: string };
+   secondaryCta: { label: string; href: string };
+ };
+@@ -534,7 +536,14 @@ export default function DiscoveryPulse() {
+     READY: dict.intelligence.stageReady,
+     COMPLETE: dict.intelligence.stageComplete,
+   };
+-  const currentStageLabel = stageLabels[activeStage] || pulse.stageLabel;
++  const statusCaption =
++    activeStage === "COMPLETE"
++      ? dict.intelligence.statusComplete
++      : activeStage === "READY"
++        ? dict.intelligence.statusReady
++        : activeStage === "FOCUS"
++          ? dict.intelligence.statusFocus
++          : dict.intelligence.statusExplore;
+ 
+   const reasonLead =
+     presentReason && presentReason !== "manual"
+@@ -657,26 +666,37 @@ export default function DiscoveryPulse() {
+ 
+             <h2
+               id="eos-intel-pulse-title"
+-              className="relative text-[17px] font-semibold leading-[1.25] tracking-[-0.02em] text-white"
++              className="relative text-[17px] font-semibold leading-[1.25] tracking-[-0.022em] text-white"
+             >
+               {pulse.directionLine}
+             </h2>
+-            <p className="relative mt-2 text-[13px] leading-relaxed text-white/55">
++            <p className="relative mt-2 text-[13px] leading-relaxed text-white/58">
+               {pulse.suggestion}
+             </p>
+ 
+-            <div className="relative mt-4 space-y-2">
++            {pulse.evidenceHint ? (
++              <p className="relative mt-3 text-[11px] font-medium tracking-wide text-white/38">
++                {pulse.evidenceHint}
++              </p>
++            ) : null}
++
++            <div className="relative mt-4 space-y-2.5">
+               <div className="flex items-center justify-between gap-3">
+-                <p className="text-[11px] font-medium tracking-wide text-white/50">
+-                  {currentStageLabel}
+-                  <span className="mx-1.5 text-white/20">·</span>
+-                  <span className="tabular-nums text-white/75">{progress}%</span>
++                <p className="min-w-0 text-[12px] font-medium leading-snug tracking-tight text-white/62">
++                  {statusCaption}
+                 </p>
+                 <StageStepper activeIndex={activeStageIndex} labels={stageLabels} />
+               </div>
+-              <div className="h-[2.5px] overflow-hidden rounded-full bg-white/[0.08]">
++              <div
++                className="h-[2.5px] overflow-hidden rounded-full bg-white/[0.08]"
++                role="progressbar"
++                aria-valuenow={progress}
++                aria-valuemin={0}
++                aria-valuemax={100}
++                aria-label={statusCaption}
++              >
+                 <motion.div
+-                  className="h-full rounded-full bg-gradient-to-r from-white/35 via-white/80 to-white/55"
++                  className="h-full rounded-full bg-gradient-to-r from-white/30 via-white/75 to-white/45"
+                   initial={{ width: 0 }}
+                   animate={{ width: `${progress}%` }}
+                   transition={{ duration: msToSec(INTEL_MOTION.progressBarMs), ease: INTEL_EASE.out }}
+@@ -684,7 +704,7 @@ export default function DiscoveryPulse() {
+               </div>
+             </div>
+ 
+-            <div className="relative mt-5 flex flex-col items-stretch gap-2.5">
++            <div className="relative mt-5 flex flex-col items-stretch gap-1.5">
+               <Link
+                 href={pulse.primaryCta.href}
+                 className="eos-btn eos-btn--primary eos-btn--block !normal-case !tracking-wide !text-[13px] !font-semibold"
+@@ -695,7 +715,7 @@ export default function DiscoveryPulse() {
+               {pulse.secondaryCta?.href ? (
+                 <Link
+                   href={pulse.secondaryCta.href}
+-                  className="rounded-full px-3 py-2 text-center text-[12px] font-medium tracking-wide text-white/55 transition hover:text-white/90"
++                  className="rounded-full px-3 py-2.5 text-center text-[12px] font-medium tracking-wide text-white/50 transition hover:bg-white/[0.04] hover:text-white/85"
+                   onClick={onCtaClick}
+                 >
+                   {pulse.secondaryCta.label}
+@@ -718,9 +738,9 @@ export default function DiscoveryPulse() {
+         }}
+         transition={reduceMotion ? { duration: 0.12 } : INTEL_ORB_SPRING}
+         className={`pointer-events-auto group relative flex h-12 w-12 items-center justify-center rounded-full border ${ringClass} bg-transparent shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition-all duration-300 hover:scale-[1.1] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_0_28px_rgba(255,255,255,0.28),0_16px_40px_rgba(0,0,0,0.5)] active:scale-[0.96]`}
+-        aria-label={`EstateOS Intelligence · ${currentStageLabel} ${progress}%`}
++        aria-label={`EstateOS Intelligence · ${statusCaption}`}
+         aria-expanded={expanded}
+-        title={`${currentStageLabel} · ${progress}%`}
++        title={statusCaption}
+       >
+         {splashKey > 0 ? (
+           <LearnSplash key={splashKey} color={colors.accent} reduceMotion={reduceMotion} />
+diff --git a/src/i18n/dictionaries.ts b/src/i18n/dictionaries.ts
+index ecd67a5d..18bfd971 100644
+--- a/src/i18n/dictionaries.ts
++++ b/src/i18n/dictionaries.ts
+@@ -73,6 +73,10 @@ export type Dictionary = {
+     stageFocus: string;
+     stageReady: string;
+     stageComplete: string;
++    statusExplore: string;
++    statusFocus: string;
++    statusReady: string;
++    statusComplete: string;
+     guideFind: string;
+     guideTropes: string;
+     guideDirection: string;
+@@ -741,10 +745,14 @@ const pl: Dictionary = {
+     confidenceOutline: "Zarys",
+     confidenceClear: "Wyraźny kierunek",
+     confidenceStrong: "Silny sygnał",
+-    stageExplore: "Odkrywanie",
+-    stageFocus: "Fokus",
+-    stageReady: "Gotowość",
++    stageExplore: "Poznajemy",
++    stageFocus: "Ostrzymy",
++    stageReady: "Na tropie",
+     stageComplete: "Domknięte",
++    statusExplore: "Dopiero poznajemy Twój gust",
++    statusFocus: "Kierunek się ostrzy",
++    statusReady: "Masz wyraźny trop",
++    statusComplete: "Ta faza jest domknięta",
+     guideFind: "Znajdź przestrzeń, która do mnie pasuje",
+     guideTropes: "Pokaż moje ważne tropy",
+     guideDirection: "Podpowiedz kolejny krok",
+@@ -1529,10 +1537,14 @@ const en: Dictionary = {
+     confidenceOutline: "Outline",
+     confidenceClear: "Clear direction",
+     confidenceStrong: "Strong signal",
+-    stageExplore: "Explore",
+-    stageFocus: "Focus",
+-    stageReady: "Ready",
++    stageExplore: "Learning",
++    stageFocus: "Sharpening",
++    stageReady: "On a lead",
+     stageComplete: "Complete",
++    statusExplore: "Still learning your taste",
++    statusFocus: "Your direction is sharpening",
++    statusReady: "You have a clear lead",
++    statusComplete: "This phase is complete",
+     guideFind: "Find a space that fits me",
+     guideTropes: "Show my key tropes",
+     guideDirection: "Suggest the next step",
+diff --git a/src/i18n/dictionaryUk.ts b/src/i18n/dictionaryUk.ts
+index aea5740e..44671395 100644
+--- a/src/i18n/dictionaryUk.ts
++++ b/src/i18n/dictionaryUk.ts
+@@ -69,10 +69,14 @@ export function buildUkDictionary(enBase: Dictionary): Dictionary {
+       confidenceOutline: "Начерк",
+       confidenceClear: "Чіткий напрямок",
+       confidenceStrong: "Сильний сигнал",
+-      stageExplore: "Дослідження",
+-      stageFocus: "Фокус",
+-      stageReady: "Готовність",
++      stageExplore: "Пізнаємо",
++      stageFocus: "Загострюємо",
++      stageReady: "На тропі",
+       stageComplete: "Завершено",
++      statusExplore: "Щойно пізнаємо ваш смак",
++      statusFocus: "Напрямок загострюється",
++      statusReady: "Є виразний троп",
++      statusComplete: "Цю фазу завершено",
+       guideFind: "Знайти простір, що пасує мені",
+       guideTropes: "Показати важливі тропи",
+       guideDirection: "Підказати наступний крок",
+diff --git a/src/lib/estateOsGuideContext.ts b/src/lib/estateOsGuideContext.ts
+index dd0534ce..6b060363 100644
+--- a/src/lib/estateOsGuideContext.ts
++++ b/src/lib/estateOsGuideContext.ts
+@@ -1,5 +1,9 @@
+ import { prisma } from '@/lib/prisma';
+ import { buildDiscoveryBuyerBrief } from '@/lib/discoveryInsights';
++import {
++  discoveryDisplayLabel,
++  discoveryPropertyTypeLabel,
++} from '@/lib/discovery/displayLabels';
+ 
+ export type GuideIntentStage = 'EXPLORE' | 'FOCUS' | 'READY' | 'COMPLETE';
+ 
+@@ -27,6 +31,8 @@ export type EstateOsGuideContext = {
+   intentLabel: string;
+   body: string;
+   summaryLine: string;
++  /** Short human chips for UI (city · type) — never a param dump. */
++  evidenceHint: string | null;
+   decisionCount: number;
+   tropes: Array<{
+     offerId: number;
+@@ -49,7 +55,7 @@ export type EstateOsGuideContext = {
+ const STAGE_LABEL: Record<GuideIntentStage, string> = {
+   EXPLORE: 'Odkrywanie',
+   FOCUS: 'Fokus',
+-  READY: 'Gotowość',
++  READY: 'Na tropie',
+   COMPLETE: 'Domknięte',
+ };
+ 
+@@ -135,9 +141,9 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+       offerId: priority.offerId,
+     };
+     body = topCity
+-      ? `Jeden sygnał „na poważnie” w okolicy ${topCity}. Otwórz ofertę albo zestaw ją ze swoim kierunkiem.`
+-      : 'Jeden sygnał „na poważnie”. Otwórz ofertę albo zestaw ją ze swoim kierunkiem — bez pośpiechu.';
+-    primaryCta = buildCta('Otwórz trop', 'TROPES', priority.offerId);
++      ? `Oznaczyłeś coś „na poważnie” w okolicy ${topCity}. Spokojnie zobacz ofertę albo zestaw ją z kierunkiem.`
++      : 'Oznaczyłeś coś „na poważnie”. Spokojnie zobacz ofertę albo zestaw ją z kierunkiem.';
++    primaryCta = buildCta('Zobacz ofertę', 'TROPES', priority.offerId);
+     secondaryCta = buildCta('Mój kierunek', 'DIRECTION');
+   } else if (contradictionIndex >= 0.55) {
+     nextStep = {
+@@ -146,7 +152,7 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+       action: 'DIRECTION',
+     };
+     body =
+-      'Twoje „pasuje” i „nie dla mnie” trochę się ścierają. Spokojny przegląd kierunku pomoże to ułożyć.';
++      'Twoje „pasuje” i „nie dla mnie” trochę się ścierają. Krótki przegląd kierunku pomoże to ułożyć.';
+     primaryCta = buildCta('Uporządkuj kierunek', 'DIRECTION');
+     secondaryCta = buildCta('Przeglądaj oferty', 'DISCOVERY');
+   } else if (intentStage === 'READY') {
+@@ -156,8 +162,8 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+       action: 'DISCOVERY',
+     };
+     // Tip only — structured prefs live in summaryLine / profile fields for UI chips.
+-    body = 'Czas doprecyzować katalog albo oznaczyć coś „na poważnie”.';
+-    primaryCta = buildCta('Doprecyzuj w katalogu', 'DISCOVERY');
++    body = 'Doprecyzuj katalog albo oznacz coś „na poważnie” — wtedy tropy stają się konkretne.';
++    primaryCta = buildCta('Przeglądaj oferty', 'DISCOVERY');
+     secondaryCta = buildCta('Mój kierunek', 'DIRECTION');
+   } else if (intentStage === 'FOCUS') {
+     nextStep = {
+@@ -166,7 +172,7 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+       action: 'DISCOVERY',
+     };
+     body =
+-      'Kilka kolejnych cichych decyzji — zwłaszcza „nie dla mnie” z powodem — mocno ostrzy gust.';
++      'Kilka kolejnych decyzji — zwłaszcza „nie dla mnie” z powodem — mocno ostrzy gust.';
+     primaryCta = buildCta('Kontynuuj ocenianie', 'DISCOVERY');
+     secondaryCta = buildCta('Mój kierunek', 'DIRECTION');
+   } else {
+@@ -176,19 +182,31 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+       action: 'DISCOVERY',
+     };
+     body =
+-      'Bez formularza. Na kartach ofert wybierz Pasuje, Nie dla mnie albo Na poważnie — Guide nauczy się z tego sam.';
++      'Bez formularza. Na ofertach wybierz Pasuje, Nie dla mnie albo Na poważnie — Intelligence uczy się z tego samo.';
+     primaryCta = buildCta('Oceń pierwsze oferty', 'DISCOVERY');
+     secondaryCta = buildCta('Mój kierunek', 'DIRECTION');
+   }
+ 
+-  const stageProgress =
+-    intentStage === 'COMPLETE'
+-      ? 1
+-      : intentStage === 'READY'
+-        ? 0.82
+-        : intentStage === 'FOCUS'
+-          ? Math.min(0.65, 0.28 + decisionCount * 0.05)
+-          : Math.min(0.22, decisionCount * 0.04);
++  // Continuous progress within stage bands — never a fake fixed 82%.
++  const stageBand: Record<GuideIntentStage, { floor: number; ceiling: number }> = {
++    EXPLORE: { floor: 0.04, ceiling: 0.26 },
++    FOCUS: { floor: 0.28, ceiling: 0.54 },
++    READY: { floor: 0.56, ceiling: 0.9 },
++    COMPLETE: { floor: 0.92, ceiling: 1 },
++  };
++  const band = stageBand[intentStage];
++  const blend = Math.min(1, Math.max(0, confidence * 0.72 + Math.min(0.28, decisionCount * 0.014)));
++  const stageProgress = band.floor + (band.ceiling - band.floor) * blend;
++
++  const evidenceBits: string[] = [];
++  if (topCity) evidenceBits.push(topCity);
++  if (brief.topPropertyTypes[0]?.key) {
++    evidenceBits.push(
++      discoveryPropertyTypeLabel(brief.topPropertyTypes[0].key) ||
++        discoveryDisplayLabel(brief.topPropertyTypes[0].key),
++    );
++  }
++  const evidenceHint = evidenceBits.length ? evidenceBits.join(' · ') : null;
+ 
+   return {
+     confidence,
+@@ -199,6 +217,7 @@ export async function buildEstateOsGuideContext(userId: number): Promise<EstateO
+     intentLabel: STAGE_LABEL[intentStage],
+     body,
+     summaryLine: brief.summaryLine,
++    evidenceHint,
+     decisionCount,
+     tropes,
+     nextStep,
+-- 
+2.43.0
+

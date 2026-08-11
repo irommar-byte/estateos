@@ -1,19 +1,16 @@
-# Android: Wkrótce dostępny
+# Android → Wkrótce dostępny
 
-Źródło zmian: `irommar-byte/estateos-app` branch `mobile-canonical-20260514` → `deploy/estateos-www-full/`.
+Produkcja żyje w **estateos-app** / branch `recovery-local-snapshot` (nie w tym starym `estateos`).
 
-## Co zmieniono
-- Badge Androida zawsze pokazuje **Wkrótce dostępny** (bez APK / Play / test Play)
-- Endpoint `/api/downloads/estateos-android` zwraca 503 coming_soon
-- Landing HTML, maile, schema.org i llms.txt bez linków pobierania Androida
-
-## Wdrożenie na VPS (produkcja)
-Skopiuj pliki z `deploy/estateos-www-full/` do katalogu WWW, np. `/home/rommar/apple-style-website/`:
+## Najprościej na Macu (1 komenda)
 
 ```bash
-# przykład — dostosuj ścieżkę docelową
-rsync -av deploy/estateos-www-full/ /home/rommar/apple-style-website/
-cd /home/rommar/apple-style-website && npm run build && pm2 restart nieruchomo
+cd /Users/marian/estateos-recovery-deploy
+# skopiuj scripts/ z tego PR albo:
+bash /ścieżka/do/scripts/apply-android-coming-soon-and-deploy.sh
 ```
 
-Albo zmerguj PR do `estateos-app` (gdy bot dostanie push) i zdeployuj stamtąd.
+Skrypt: nakłada patch → push `recovery-local-snapshot` → `ssh estateos` → `deploy:server-only`.
+
+## Albo daj Cursorowi dostęp
+Nadaj Cursorowi **write** do `irommar-byte/estateos-app` i uruchom agenta na tym repo — wtedy zrobi to sam (commit, push, deploy).
